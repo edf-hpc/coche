@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" ?> 
+<!DOCTYPE cluster PUBLIC "coche.dtd" "https://github.com/edf-hpc/coche/tree/master/doc/coche.dtd" >
+<cluster version="1.0" >
+	
+	<network name="cluster" mask="192.168.0.0/23" />
+		
+	<class name="compute" type="cnode">
+		<area name="local" network="cluster" hosts="cn[001-152]" iprange="192.168.0.[11-162]" />
+	</class>
+	
+	<class name="graph" type="gnode">
+		<area name="local" network="cluster" hosts="cg[001-010]" iprange="192.168.0.[163-172]" />
+	</class>
+	
+	<class name="debian" type="default">
+		<include>compute</include>
+		<include>graph</include>
+	</class>
+	
+		
+	<netconfig name="default" classes="compute,graph" type="physical">
+		<device name="eth0" link="local" target="local" state="up" />
+	</netconfig>
+			
+	<hardware name="default">
+		<cpu ncores="16" maxfreq="2701000" />
+		<memory ram="132264244" swap="129163256" />
+		<disk device="/dev/sda" size="488386584" />
+		<disk device="/dev/sdb" size="488386584" />
+	</hardware>		
+	
+	
+	<system name="default" type="Debian">
+		<pkgs list="/etc/calibre/installed" />
+		<kernel version="2.6.32-5-amd64" />
+	</system>			
+		
+	<mount name="root" mountpoint="/" device="/dev/mapper/vg01-lv_root" fstype="ext3" size="19G" options="acl" classes="debian" />
+	<mount name="boot" mountpoint="/boot" device="/dev/md0" fstype="ext3" size="473M" classes="debian" />
+	<mount name="tmp" mountpoint="/local00" device="/dev/mapper/vg01-lv_tmp" fstype="ext3" size="519G" classes="debian" />
+	<mount name="home" mountpoint="/home" device="nfs:/home" fstype="nfs" size="80T" classes="frontend"> 
+		<quota type="soft" target="user" size="250G" />
+		<quota type="hard" target="user" size="256G" />
+	</mount>
+
+	<file name="/etc/hosts" classes="compute,graph" owner="root" group="root" perms="0644" />
+</cluster>

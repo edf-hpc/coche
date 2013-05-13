@@ -1,0 +1,84 @@
+<!-- DTD coche version 1.0 -->
+<!-- (C) 2013 EDF SA - Authors: Martial BORNET, Mehdi DOGGUY and Antonio J. RUSSO -->
+<!ELEMENT cluster (network+, class+, (netconfig | system | hardware | file | mount)*) >
+	<!ATTLIST cluster version CDATA #REQUIRED >
+	
+	<!ELEMENT network EMPTY >
+		<!ATTLIST network name CDATA #REQUIRED >
+		<!-- desc : network description in CIDR notation (192.168.0.0/24) -->
+		<!ATTLIST network mask CDATA #REQUIRED >
+	
+	<!ELEMENT class (area | include)+ >
+		<!ATTLIST class name CDATA #REQUIRED >
+		<!ATTLIST class type CDATA #REQUIRED >
+		<!ELEMENT area  EMPTY >
+			<!ATTLIST area name CDATA #REQUIRED >
+			<!-- network : network name -->
+			<!ATTLIST area network CDATA #REQUIRED >
+			<!-- network : hostname using clush format (node[1-2]) -->
+			<!ATTLIST area hosts CDATA #REQUIRED >
+			<!-- iprange : ip range using clush format (192.168.0.[1-2]) -->
+			<!ATTLIST area iprange CDATA #REQUIRED >
+		<!ELEMENT include (#PCDATA) >
+	
+	<!ELEMENT netconfig (device)+ >
+		<!ATTLIST netconfig name CDATA #REQUIRED >
+		<!-- classes : classes names. Elements should be separated with commas -->
+		<!ATTLIST netconfig classes CDATA #REQUIRED >
+		<!-- type : use virtual to declare addresses managed by corosync or heartbeat -->
+		<!ATTLIST netconfig type (physical | virtual )  "physical" >
+		<!ELEMENT device  EMPTY >
+			<!-- link : ... -->
+			<!ATTLIST device link CDATA #REQUIRED >
+			<!-- target : ... -->
+			<!ATTLIST device target CDATA #REQUIRED >
+			<!ATTLIST device name CDATA #REQUIRED >
+			<!ATTLIST device state (up | down ) "up">
+			
+	<!ELEMENT mount (quota)* >
+		<!ATTLIST mount classes CDATA #REQUIRED >
+		<!ATTLIST mount options CDATA #IMPLIED >
+		<!ATTLIST mount name CDATA #REQUIRED >
+		<!ATTLIST mount mountpoint CDATA #REQUIRED >
+		<!ATTLIST mount device CDATA #REQUIRED >
+		<!ATTLIST mount fstype CDATA #IMPLIED >
+		<!ATTLIST mount size CDATA #IMPLIED >	
+		<!ELEMENT quota  EMPTY >
+			<!ATTLIST quota type (soft | hard ) "soft">
+			<!ATTLIST quota target (user | group ) "user">
+			<!ATTLIST quota size CDATA #REQUIRED >
+	
+	<!ELEMENT system (kernel|pkgs)* >
+		<!ATTLIST system name CDATA #REQUIRED >
+		<!ATTLIST system type CDATA #REQUIRED >
+		<!ELEMENT kernel  EMPTY >
+			<!ATTLIST kernel version CDATA #IMPLIED >
+		<!ELEMENT pkgs  EMPTY >
+			<!-- list : ... -->
+			<!ATTLIST pkgs list CDATA #IMPLIED >	
+	
+	<!ELEMENT hardware (memory|disk|cpu)* >
+		<!ATTLIST hardware name CDATA #REQUIRED >
+		<!ELEMENT memory EMPTY >
+			<!-- swap : swap space size in kb -->
+			<!ATTLIST memory swap CDATA #IMPLIED >
+			<!-- ram : physical memory size in kb  -->
+			<!ATTLIST memory ram CDATA #IMPLIED >
+		<!ELEMENT disk  EMPTY >
+			<!ATTLIST disk device CDATA #IMPLIED >
+			<!-- size : disk size in kb -->
+			<!ATTLIST disk size CDATA #IMPLIED >
+		<!ELEMENT cpu  EMPTY >
+			<!-- maxfreq : ... -->
+			<!ATTLIST cpu maxfreq CDATA #IMPLIED >
+			<!-- ncores : ... -->
+			<!ATTLIST cpu ncores CDATA #IMPLIED >
+
+	<!ELEMENT file  EMPTY >
+		<!ATTLIST file classes CDATA #REQUIRED >
+		<!ATTLIST file owner CDATA #IMPLIED >
+		<!ATTLIST file group CDATA #IMPLIED >
+		<!ATTLIST file name CDATA #REQUIRED >
+		<!-- perms : using standard POSIX permissions (0644) -->
+		<!ATTLIST file perms CDATA #IMPLIED >
+
