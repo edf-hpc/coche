@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" ?> 
-<!DOCTYPE cluster PUBLIC "coche.dtd" "https://github.com/edf-hpc/coche/tree/master/doc/coche.dtd" >
+<!DOCTYPE cluster PUBLIC "coche.dtd" "https://raw.github.com/edf-hpc/coche/master/doc/coche.dtd" >
 <cluster version="1.0" >
 	
 	<network name="cluster" mask="192.168.0.0/23" />
@@ -18,7 +18,7 @@
 	</class>
 	
 		
-	<netconfig name="default" classes="compute,graph" type="physical">
+	<netconfig name="default" classes="compute,graph" >
 		<device name="eth0" link="local" target="local" state="up" />
 	</netconfig>
 			
@@ -29,19 +29,53 @@
 		<disk device="/dev/sdb" size="488386584" />
 	</hardware>		
 	
+	<service name="mnt-remote">
+		<node classes="compute" type="commons" >
+			<mount name="scratch" mountpoint="/scratch" device="ibmds1@o2ib0,mds1@tcp0:ibmds2@o2ib0,mds2@tcp0:/lustrefs" fstype="lustrefs" size="204T"> 
+				<quota type="soft" target="user" size="250G" />
+				<quota type="hard" target="user" size="256G" />
+			</mount>
+			<mount name="logiciels" mountpoint="/logiciels" device="ibnfs:/logiciels" fstype="nfs" size="1T" options="rw,soft,timeo=3,retrans=15,vers=3,proto=tcp" />
+			<mount name="home" mountpoint="/home" device="ibnfs:/home" fstype="nfs" size="80T" > 
+				<quota type="soft" target="user" size="250G" />
+				<quota type="hard" target="user" size="256G" />
+			</mount>
+		</node>
+	</service>
 	
-	<system name="default" type="Debian">
-		<pkgs list="/etc/calibre/installed" />
-		<kernel version="2.6.32-5-amd64" />
-	</system>			
-		
-	<mount name="root" mountpoint="/" device="/dev/mapper/vg01-lv_root" fstype="ext3" size="19G" options="acl" classes="debian" />
-	<mount name="boot" mountpoint="/boot" device="/dev/md0" fstype="ext3" size="473M" classes="debian" />
-	<mount name="tmp" mountpoint="/local00" device="/dev/mapper/vg01-lv_tmp" fstype="ext3" size="519G" classes="debian" />
-	<mount name="home" mountpoint="/home" device="nfs:/home" fstype="nfs" size="80T" classes="frontend"> 
-		<quota type="soft" target="user" size="250G" />
-		<quota type="hard" target="user" size="256G" />
-	</mount>
-
-	<file name="/etc/hosts" classes="compute,graph" owner="root" group="root" perms="0644" />
+	<service name="commons">
+		<node classes="debian" type="commons" >
+			<pkgs status="installed" match="subset" >
+				<include>/etc/debian/installed</include>
+			</pkgs>
+			<system type="debian">
+				<kernel version="2.6.32-5-amd64" />
+			</system>
+		</node>
+		<node classes="rhel" type="commons" >
+			<pkgs status="installed" match="subset" >
+				<include>/etc/rhel/installed</include>
+			</pkgs>
+			<system type="rhel">
+				<kernel version="2.6.32-5-amd64" />
+			</system>
+		</node>
+	</service>			
+	
+	<service name="dhcp">
+		<node classes="services" type="server" ha="active-active" >
+			<demon name="isc-dhcp-server" status="running" />
+			<pkgs status="installed" match="subset" >
+				<list>isc-dhcp-server</list>
+			</pkgs>
+			<file name="/etc/default/isc-dhcp-server" owner="root" group="root" perms="0644" />
+			<file name="/etc/dhcp/install.debian" owner="root" group="root" perms="0644" />
+			<file name="/etc/dhcp/install.rhel" owner="root" group="root" perms="0644" />
+			<file name="/etc/dhcp/dhcpd.conf" owner="root" group="root" perms="0644" same="no" />
+		</node>
+		<node classes="all" type="client" >	
+			<test> </test> 		
+		</node>
+	</service>
+	
 </cluster>
