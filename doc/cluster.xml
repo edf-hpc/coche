@@ -1,20 +1,23 @@
 ﻿<?xml version="1.0" ?> 
-<!DOCTYPE cluster PUBLIC "coche.dtd" "https://raw.github.com/edf-hpc/coche/master/doc/coche.dtd" >
-<cluster version="1.0" >
+<!DOCTYPE cluster PUBLIC "https://raw.github.com/edf-hpc/coche/master/doc/coche.dtd" "coche.dtd" >
+<cluster name="cluster1" version="1.0">
 	
-	<network name="cluster" mask="192.168.0.0/23" />
+	<network name="cluster" description="192.168.0.0/23" />
 		
 	<class name="compute" type="cnode">
 		<area name="local" network="cluster" hosts="cn[001-152]" iprange="192.168.0.[11-162]" />
+		<default>local</default>
 	</class>
 	
 	<class name="graph" type="gnode">
 		<area name="local" network="cluster" hosts="cg[001-010]" iprange="192.168.0.[163-172]" />
+		<default>local</default>
 	</class>
 	
 	<class name="debian" type="default">
 		<include>compute</include>
 		<include>graph</include>
+		<default>local</default>
 	</class>
 	
 		
@@ -74,7 +77,6 @@
 			<file name="/etc/dhcp/dhcpd.conf" owner="root" group="root" perms="0644" same="no" />
 		</node>
 		<node classes="all" type="client" >	
-			<test> </test> 		
 		</node>
 	</service>
 	
