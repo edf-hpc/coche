@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" ?> 
+<?xml version="1.0" ?>
 <!DOCTYPE cluster PUBLIC "https://raw.github.com/edf-hpc/coche/master/doc/coche.dtd" "coche.dtd" >
 <cluster name="cluster1" version="1.0">
 	
@@ -22,7 +22,7 @@
 	
 		
 	<netconfig name="default" classes="compute,graph" >
-		<device name="eth0" link="local" target="local" state="up" />
+		<device name="eth0" target="local" state="up" />
 	</netconfig>
 			
 	<hardware name="default">
@@ -48,17 +48,17 @@
 	
 	<service name="commons">
 		<node classes="debian" type="commons" >
-			<pkgs status="installed" match="subset" >
+			<packages status="installed" match="subset" >
 				<include>/etc/debian/installed</include>
-			</pkgs>
+			</packages>
 			<system type="debian">
 				<kernel version="2.6.32-5-amd64" />
 			</system>
 		</node>
 		<node classes="rhel" type="commons" >
-			<pkgs status="installed" match="subset" >
+			<packages status="installed" match="subset" >
 				<include>/etc/rhel/installed</include>
-			</pkgs>
+			</packages>
 			<system type="rhel">
 				<kernel version="2.6.32-5-amd64" />
 			</system>
@@ -67,10 +67,10 @@
 	
 	<service name="dhcp">
 		<node classes="services" type="server" ha="active-active" >
-			<demon name="isc-dhcp-server" status="running" />
-			<pkgs status="installed" match="subset" >
+			<daemon name="isc-dhcp-server" status="running" />
+			<packages status="installed" match="subset" >
 				<list>isc-dhcp-server</list>
-			</pkgs>
+			</packages>
 			<file name="/etc/default/isc-dhcp-server" owner="root" group="root" perms="0644" />
 			<file name="/etc/dhcp/install.debian" owner="root" group="root" perms="0644" />
 			<file name="/etc/dhcp/install.rhel" owner="root" group="root" perms="0644" />

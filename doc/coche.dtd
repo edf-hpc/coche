@@ -1,12 +1,12 @@
 <!-- DTD coche version 1.0 -->
 <!-- (C) 2013 EDF SA  -->
 <!ELEMENT cluster (network+, class+, (netconfig | hardware | service)*) >
-	<!ATTLIST cluster name CDATA #REQUIRED >	
-	<!ATTLIST cluster version CDATA #REQUIRED >	
+	<!ATTLIST cluster name CDATA #REQUIRED >
+	<!ATTLIST cluster version CDATA #REQUIRED >
 	<!ELEMENT network EMPTY >
 		<!ATTLIST network name CDATA #REQUIRED >
 		<!-- desc : network description in CIDR notation (192.168.0.0/24) -->
-		<!ATTLIST network description CDATA #REQUIRED >	
+		<!ATTLIST network description CDATA #REQUIRED >
 	<!ELEMENT class ((area | include)+, default) >
 		<!ATTLIST class name CDATA #REQUIRED >
 		<!ATTLIST class type CDATA #REQUIRED >
@@ -18,7 +18,7 @@
 			<!ATTLIST area hosts CDATA #REQUIRED >
 			<!-- iprange : ip range using clush format (192.168.0.[1-2]) -->
 			<!ATTLIST area iprange CDATA #REQUIRED >
-		<!ELEMENT include (#PCDATA) >	
+		<!ELEMENT include (#PCDATA) >
 		<!ELEMENT default (#PCDATA) >
 	<!ELEMENT netconfig (device)+ >
 		<!ATTLIST netconfig name CDATA #REQUIRED >
@@ -27,12 +27,10 @@
 		<!-- type : use virtual to declare addresses managed by corosync or heartbeat -->
 		<!ATTLIST netconfig type (physical | virtual)  "physical" >
 		<!ELEMENT device  EMPTY >
-			<!-- link : ... -->
-			<!ATTLIST device link CDATA #REQUIRED >
 			<!-- target : ... -->
 			<!ATTLIST device target CDATA #REQUIRED >
 			<!ATTLIST device name CDATA #REQUIRED >
-			<!ATTLIST device state (up | down) "up">			
+			<!ATTLIST device state (up | down) "up">
 	<!ELEMENT hardware (memory|disk|cpu)* >
 		<!ATTLIST hardware name CDATA #REQUIRED >
 		<!ELEMENT memory EMPTY >
@@ -48,36 +46,36 @@
 			<!-- maxfreq : ... -->
 			<!ATTLIST cpu maxfreq CDATA #IMPLIED >
 			<!-- ncores : ... -->
-			<!ATTLIST cpu ncores CDATA #IMPLIED >				
+			<!ATTLIST cpu ncores CDATA #IMPLIED >
 	<!ELEMENT service ((node | include)+) >
 		<!ATTLIST service name CDATA #REQUIRED >
-		<!ELEMENT node ((mount | demon | pkgs | system | file | test)*) >
+		<!ELEMENT node ((mount | daemon | packages | system | file)*) >
 			<!ATTLIST node classes CDATA #REQUIRED >
 			<!ATTLIST node type CDATA #IMPLIED >
 			<!ATTLIST node ha (active-active | active-passive) "active-passive">
-			<!ELEMENT mount (quota)* >			
+			<!ELEMENT mount (quota)* >
 				<!ATTLIST mount options CDATA #IMPLIED >
 				<!ATTLIST mount name CDATA #REQUIRED >
 				<!ATTLIST mount mountpoint CDATA #REQUIRED >
 				<!ATTLIST mount device CDATA #REQUIRED >
 				<!ATTLIST mount fstype CDATA #IMPLIED >
-				<!ATTLIST mount size CDATA #IMPLIED >	
-			<!ELEMENT quota  EMPTY >
-				<!ATTLIST quota type (soft | hard) "soft">
-				<!ATTLIST quota target (user | group) "user">
-				<!ATTLIST quota size CDATA #REQUIRED >
-			<!ELEMENT demon EMPTY >
-				<!ATTLIST demon name CDATA #REQUIRED >
-				<!ATTLIST demon status (running | stopped) "running" >				
-			<!ELEMENT pkgs (list | include)+ >
-				<!ATTLIST pkgs status (installed | absent) "installed" >	
-				<!ATTLIST pkgs match (exact | subset) "exact" >
+				<!ATTLIST mount size CDATA #IMPLIED >
+				<!ELEMENT quota  EMPTY >
+					<!ATTLIST quota type (soft | hard) "soft">
+					<!ATTLIST quota target (user | group) "user">
+					<!ATTLIST quota size CDATA #REQUIRED >
+			<!ELEMENT daemon EMPTY >
+				<!ATTLIST daemon name CDATA #REQUIRED >
+				<!ATTLIST daemon status (running | stopped) "running" >
+			<!ELEMENT packages (list | include)+ >
+				<!ATTLIST packages status (installed | absent) "installed" >
+				<!ATTLIST packages match (exact | subset) "exact" >
 				<!ELEMENT list (#PCDATA)  >
-			<!ELEMENT system (kernel)* >			
+			<!ELEMENT system (kernel)* >
 				<!ATTLIST system type CDATA #REQUIRED >
 				<!ELEMENT kernel EMPTY >
-					<!ATTLIST kernel version CDATA #IMPLIED >	
-			<!ELEMENT file  EMPTY >			
+					<!ATTLIST kernel version CDATA #IMPLIED >
+			<!ELEMENT file  EMPTY >
 				<!ATTLIST file owner CDATA #IMPLIED >
 				<!ATTLIST file group CDATA #IMPLIED >
 				<!ATTLIST file name CDATA #REQUIRED >
@@ -85,7 +83,4 @@
 				<!ATTLIST file perms CDATA #IMPLIED >
 				<!ATTLIST file same (yes | no ) "yes"  >
 				<!ATTLIST file type (file | directory | socket ) "file"  >
-			<!ELEMENT test  EMPTY >		
-				<!ATTLIST test name CDATA #REQUIRED >
-				<!ATTLIST test parameter CDATA #IMPLIED >
-		
+
