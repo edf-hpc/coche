@@ -1,53 +1,52 @@
 <?xml version="1.0" ?>
 <!DOCTYPE cluster PUBLIC "https://raw.github.com/edf-hpc/coche/master/doc/coche.dtd" "coche.dtd" >
 <cluster name="cluster1" version="1.0">
-	
+
 	<network name="cluster" description="192.168.0.0/23" />
-		
+
 	<class name="compute" type="cnode">
 		<area name="local" network="cluster" hosts="cn[001-152]" iprange="192.168.0.[11-162]" />
 		<default>local</default>
 	</class>
-	
+
 	<class name="graph" type="gnode">
 		<area name="local" network="cluster" hosts="cg[001-010]" iprange="192.168.0.[163-172]" />
 		<default>local</default>
 	</class>
-	
-	<class name="debian" type="default">
-		<include>compute</include>
-		<include>graph</include>
-		<default>local</default>
-	</class>
-	
-		
+
+        <class name="debian" type="default">
+                <include>compute</include>
+                <include>graph</include>
+                <default>local</default>
+        </class>
+
 	<netconfig name="default" classes="compute,graph" >
 		<device name="eth0" target="local" state="up" />
 	</netconfig>
-			
+
 	<hardware name="default">
-		<cpu ncores="16" maxfreq="2701000" />
+		<cpu ncores="16" maxfreq="2.7 GHz" />
 		<memory ram="132264244" swap="129163256" />
 		<disk device="/dev/sda" size="488386584" />
 		<disk device="/dev/sdb" size="488386584" />
-	</hardware>		
-	
+	</hardware>
+
 	<service name="mnt-remote">
 		<node classes="compute" type="commons" >
-			<mount name="scratch" mountpoint="/scratch" device="ibmds1@o2ib0,mds1@tcp0:ibmds2@o2ib0,mds2@tcp0:/lustrefs" fstype="lustrefs" size="204T"> 
-				<quota type="soft" target="user" size="250G" />
-				<quota type="hard" target="user" size="256G" />
+			<mount name="scratch" mountpoint="/scratch" device="ibmds1@o2ib0,mds1@tcp0:ibmds2@o2ib0,mds2@tcp0:/lustrefs" fstype="lustrefs" size="204 TB">
+				<quota type="soft" target="user" size="250 GB" />
+				<quota type="hard" target="user" size="256 GB" />
 			</mount>
-			<mount name="logiciels" mountpoint="/logiciels" device="ibnfs:/logiciels" fstype="nfs" size="1T" options="rw,soft,timeo=3,retrans=15,vers=3,proto=tcp" />
-			<mount name="home" mountpoint="/home" device="ibnfs:/home" fstype="nfs" size="80T" > 
-				<quota type="soft" target="user" size="250G" />
-				<quota type="hard" target="user" size="256G" />
+			<mount name="logiciels" mountpoint="/logiciels" device="ibnfs:/logiciels" fstype="nfs" size="1 TB" options="rw,soft,timeo=3,retrans=15,vers=3,proto=tcp" />
+			<mount name="home" mountpoint="/home" device="ibnfs:/home" fstype="nfs" size="80 TB" >
+				<quota type="soft" target="user" size="250 GB" />
+				<quota type="hard" target="user" size="256 GB" />
 			</mount>
 		</node>
 	</service>
-	
+
 	<service name="commons">
-		<node classes="debian" type="commons" >
+		<node classes="compute" type="commons" >
 			<packages status="installed" match="subset" >
 				<include>/etc/debian/installed</include>
 			</packages>
@@ -55,7 +54,7 @@
 				<kernel version="2.6.32-5-amd64" />
 			</system>
 		</node>
-		<node classes="rhel" type="commons" >
+		<node classes="compute" type="commons" >
 			<packages status="installed" match="subset" >
 				<include>/etc/rhel/installed</include>
 			</packages>
@@ -63,10 +62,10 @@
 				<kernel version="2.6.32-5-amd64" />
 			</system>
 		</node>
-	</service>			
-	
+	</service>
+
 	<service name="dhcp">
-		<node classes="services" type="server" ha="active-active" >
+		<node classes="compute" type="server" ha="active-active" >
 			<daemon name="isc-dhcp-server" status="running" />
 			<packages status="installed" match="subset" >
 				<list>isc-dhcp-server</list>
@@ -76,8 +75,8 @@
 			<file name="/etc/dhcp/install.rhel" owner="root" group="root" perms="0644" />
 			<file name="/etc/dhcp/dhcpd.conf" owner="root" group="root" perms="0644" same="no" />
 		</node>
-		<node classes="all" type="client" >	
+		<node classes="compute" type="client" >
 		</node>
 	</service>
-	
+
 </cluster>
