@@ -56,8 +56,7 @@ let () =
         Options.ocamlopt := ocamlfind "ocamlopt";
         Options.ocamldep := ocamlfind "ocamldep";
         Options.ocamldoc := ocamlfind "ocamldoc";
-        (* Options.use_menhir := true; *)
-        (* Options.ocaml_yaccflags := ["--explain"] *)
+        Pathname.define_context "lib/benlib" ["lib"];
 
     | After_rules ->
         flag ["ocaml"; "link"; "program"] & A"-linkpkg";
@@ -66,11 +65,6 @@ let () =
              let flag x = flag (x::["ocaml"]) & S[A"-package"; A pkg] in
              List.iter flag ["ocamldep"; "compile"; "link"; "doc"])
           packages;
-
-        (* C stubs *)
-        (* flag ["link"; "program"; "ocaml"; "byte"; "use_libdochelp"] *)
-          (* (S[A"-dllib"; A"-ldochelp"]); *)
-        (* dep  ["link"; "ocaml"; "use_libdochelp"] ["src/libdochelp.a"]; *)
 
     | _ -> ()
   end

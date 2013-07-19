@@ -37,7 +37,10 @@ OCAMLBUILD := ocamlbuild$(CLASSIC)$(if $(HAS_OPT),, -byte-plugin)
 OCAMLBUILD_ENV := OCAMLFIND_COMMANDS='ocamlc=jocamlc ocamlopt=jocamlopt ocamldep=jocamldep'
 
 # Build
-TARGETS := $(NAME).$(ARCH)
+TARGETS := $(NAME).$(ARCH) lib/coche.cma
+ifeq ($(ARCH),native)
+TARGETS += lib/coche.cmxa
+endif
 
 # C stubs magic for bytecode
 export CAML_LD_LIBRARY_PATH=$(CURDIR)/_build/src
