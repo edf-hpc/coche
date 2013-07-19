@@ -1,30 +1,56 @@
 {
 
-  exception Error of string
+  open Errors
 
-  type expr =
+  type rexpr =
     | Coord of int
     | Range of int * int
     | IpRange of (int * int) list
+  type range_elt = rexpr list
+  type range = range_elt list
 
-  type range = expr list
+  type hexpr =
+    | Prefix of string
+    | List of int * int * int
+  type hosts_elt = hexpr list
+  type hosts = hosts_elt list
 
   type ipv4 = int * int * int * int
   type prefix = int
   type cidr = ipv4 * prefix
 
-  let string_of_expr = function
+  let seq_sep = ","
+  let dot_sep = "."
+
+  let string_of_rexpr = function
   | Coord i -> string_of_int i
   | Range (b, e) -> Printf.sprintf "%d-%d" b e
   | IpRange l ->
       let bl, el = List.split l in
-      let bl = ExtString.String.join "." (List.map string_of_int bl) in
-      let el = ExtString.String.join "." (List.map string_of_int el) in
+      let bl = ExtString.String.join dot_sep (List.map string_of_int bl) in
+      let el = ExtString.String.join dot_sep (List.map string_of_int el) in
       Printf.sprintf "(%s-%s)" bl el
 
+  let string_of_range_elt r =
+    let l = List.map string_of_rexpr r in
+    ExtString.String.join dot_sep l
+
   let string_of_range r =
-    let l = List.map string_of_expr r in
-    ExtString.String.join "." l
+    let l = List.map string_of_range_elt r in
+    ExtString.String.join seq_sep l
+
+  let string_of_hexpr = function
+  | Prefix prefix -> prefix
+  | List (head, tail, len) ->
+      Printf.sprintf "[%.*d-%.*d]" len head len tail
+
+  let string_of_hosts_elt h =
+    let l = List.map string_of_hexpr h in
+    ExtString.String.join "" l
+
+  let string_of_hosts h =
+    let l = List.map string_of_hosts_elt h in
+    ExtString.String.join "," l
 
   let string_of_prefix = string_of_int
   let string_of_ipv4 (a,b,c,d) = Printf.sprintf "%d.%d.%d.%d" a b c d
@@ -33,20 +59,18 @@
       (string_of_ipv4 ip)
       (string_of_prefix prefix)
 
-  let dot = Str.regexp "\\."
-
   let iprange bc ec =
     if (String.contains bc '.' <> String.contains ec '.') then
-      raise (Error "Cannot mix ranges and IP ranges")
+      raise Errors.Cannot_mix_different_kind_of_ranges
     else if String.contains bc '.' then
-      let bc = Str.split dot bc in
-      let ec = Str.split dot ec in
+      let bc = ExtString.String.nsplit bc dot_sep in
+      let ec = ExtString.String.nsplit ec dot_sep in
       if List.length bc = List.length ec then
         let bc = List.map int_of_string bc in
         let ec = List.map int_of_string ec in
         IpRange (List.combine bc ec)
       else
-        raise (Error "IP ranges with different depth")
+        raise IP_ranges_with_different_depths
     else
       Range (int_of_string bc, int_of_string ec)
 
@@ -55,7 +79,9 @@
 
 }
 
-rule read buff = parse
+let ident = ['-' 'a'-'z' 'A'-'Z' '0'-'9' ]
+
+rule read_range buff = parse
 | (['0'-'9']+ as coord) {
     let coord = int_of_string coord in
     next (Coord coord :: buff) lexbuf
@@ -68,11 +94,24 @@ rule read buff = parse
 | '[' (['0'-'9' '.']+ as bc) '-' (['0'-'9' '.']+ as ec) ']' {
     next (iprange bc ec :: buff) lexbuf
   }
-| _ { raise (Error "Not supported format!") }
+| _ { raise (Format_not_supported (Lexing.lexeme lexbuf)) }
 
 and next buff = parse
-| '.' { read buff lexbuf }
+| '.' { read_range buff lexbuf }
 | eof { buff             }
+
+and read_hosts buff = parse
+| ident+ as prefix {
+    read_hosts (Prefix prefix :: buff) lexbuf
+  }
+| (ident* as prefix) '[' (['0'-'9']+ as head) '-' (['0'-'9']+ as tail) ']' (ident* as suffix) {
+    let len = Pervasives.max (String.length head) (String.length tail) in
+    let head = int_of_string head in
+    let tail = int_of_string tail in
+    read_hosts (Prefix suffix :: List (head, tail, len) :: Prefix prefix :: buff) lexbuf
+  }
+| eof { buff }
+| _ { raise (Invalid_hosts_description (Lexing.lexeme lexbuf)) }
 
 {
 
@@ -82,22 +121,40 @@ and next buff = parse
   | Range _ :: l -> 1 + length l
   | IpRange c :: l -> List.length c + length l
 
-  let range s =
-    let expr = List.rev (read [] (Lexing.from_string s)) in
+  let range_elt s =
+    let expr = List.rev (read_range [] (Lexing.from_string s)) in
     if length expr <> 4 then
-      raise (Error "IP address range with length different from 4")
+      raise IP_range_with_incorrect_depth
     else
       expr
 
-  let seq b e =
+  let range s =
+    let r = ExtString.String.nsplit s seq_sep in
+    List.map range_elt r
+
+  let hosts_elt s =
+    let expr = read_hosts [] (Lexing.from_string s) in
+    let rec cleanup = function
+    | [] -> []
+    | Prefix "" :: l -> cleanup l
+    | h :: l -> h::(cleanup l)
+    in
+    List.rev (cleanup expr)
+
+  let hosts s =
+    let h = ExtString.String.nsplit s seq_sep in
+    let l = List.map hosts_elt h in
+    List.fold_left (fun acc -> function [] -> acc | elt -> elt :: acc) [] l
+
+  let rec seq b e =
     if b <= e then
-      let rec seq b e =
+      let rec aux b e =
         if b = e
         then [e]
-        else b::(seq (b+1) e)
+        else b::(aux (b+1) e)
       in seq b e
     else
-      raise (Error "Malformed Sequence (1)")
+      seq e b
 
   let coord_seq b e =
     if b <= e then
@@ -165,8 +222,8 @@ and next buff = parse
       let h, l = f l in
       h, Some l
 
-  let extract_first l = extract extract_first l
-  let extract_last  l = extract extract_last  l
+  let extract_first = extract extract_first
+  let extract_last  = extract extract_last
 
   let option_to_list = function
   | Some l -> l
@@ -175,67 +232,86 @@ and next buff = parse
   let append_coord coord prefix =
     if prefix = ""
     then coord
-    else prefix ^ "." ^ coord
+    else prefix ^ dot_sep ^ coord
 
-  let rec expand' prefixes = function
+  let rec expand_range_elt prefixes = function
   | [] -> prefixes
   | Coord coord :: l ->
       let coord = string_of_int coord in
       let prefixes = List.map (append_coord coord) prefixes in
-      expand' prefixes l
+      expand_range_elt prefixes l
   | Range (b, e) :: l ->
       if b = e
-      then expand' prefixes (Coord b :: l)
+      then expand_range_elt prefixes (Coord b :: l)
       else
         let seq_be = coord_seq b e in
         let prefixes = List.flatten
-          (List.map (expand' prefixes) seq_be)
-        in expand' prefixes l
+          (List.map (expand_range_elt prefixes) seq_be)
+        in expand_range_elt prefixes l
   | (IpRange ([]) | IpRange ([_])) :: _ ->
-      raise (Error "Empty IpRange")
+      raise Empty_IP_range
   | (IpRange ((b,e)::_)) :: _ when b > e ->
-      raise (Error "IpRange with non-ordered elements")
+      raise IP_range_with_non_ordered_elements
   | (IpRange ((b,e)::l)) :: tl when b = e ->
-      expand' (expand' prefixes [Coord b]) [IpRange l]
+      expand_range_elt (expand_range_elt prefixes [Coord b]) [IpRange l]
   | (IpRange ((b,e)::l)) :: tl ->
       let first =
-        let prefixes = expand' prefixes [Coord b] in
+        let prefixes = expand_range_elt prefixes [Coord b] in
         let subnets = List.map (fun (b,_) -> Range (b, max)) l in
         let real_first, rest = extract_first subnets in
-        expand' prefixes real_first @ expand' prefixes (option_to_list rest)
+        expand_range_elt prefixes real_first @ expand_range_elt prefixes (option_to_list rest)
       in
       let middle =
         if b+1 < e then
-          let p = expand' prefixes [Range (b+1,e-1)] in
-          expand' p (List.map (fun _ -> Range (min, max)) l)
+          let p = expand_range_elt prefixes [Range (b+1,e-1)] in
+          expand_range_elt p (List.map (fun _ -> Range (min, max)) l)
         else
           []
       in
       let last =
-        let prefixes = expand' prefixes [Coord e] in
+        let prefixes = expand_range_elt prefixes [Coord e] in
         let subnets = List.map (fun (_,e) -> Range (min, e)) l in
         let real_last, rest = extract_last subnets in
-        expand' prefixes real_last @ expand' prefixes (option_to_list rest)
+        expand_range_elt prefixes real_last @ expand_range_elt prefixes (option_to_list rest)
 
       in
-      expand' (first @ middle @ last) tl
+      expand_range_elt (first @ middle @ last) tl
+
+  let rec expand_hosts_elt prefixes = function
+  | [] -> prefixes
+  | Prefix prefix :: tl ->
+      let prefixes = List.map (fun p -> p ^ prefix) prefixes in
+      expand_hosts_elt prefixes tl
+  | List (head, tail, len) :: tl ->
+      let seq = seq head tail in
+      let seq = List.map (fun s -> [Prefix (Printf.sprintf "%.*d" len s)]) seq in
+      let prefixes = List.flatten
+        (List.map (expand_hosts_elt prefixes) seq) in
+      expand_hosts_elt prefixes tl
 
   let cidr s =
     try
       Scanf.sscanf s "%u.%u.%u.%u/%u"
         (fun a b c d p -> (a,b,c,d),p)
     with _ ->
-      raise (Error "Malformed network description")
+      raise (Invalid_network_description s)
 
   let ip s =
     try
       Scanf.sscanf s "%u.%u.%u.%u"
         (fun a b c d -> a,b,c,d)
     with _ ->
-      raise (Error "Malformed IP address description")
+      raise (Invalid_IP_address_description s)
 
   let expand_range r =
-    List.sort Pervasives.compare (expand' [""] r)
+    (* WARNING: We do not remove duplicates intentionally! *)
+    let r = List.flatten (List.map (expand_range_elt [""]) r) in
+    List.sort Pervasives.compare r
+
+  let expand_hosts h =
+    (* WARNING: We do not remove duplicates intentionally! *)
+    let h = List.flatten (List.map (expand_hosts_elt [""]) h) in
+    List.sort Pervasives.compare h
 
   let expand_ip_range r =
     List.map ip (expand_range r)
@@ -284,7 +360,7 @@ and next buff = parse
     let block_end = from_int ((to_int addr) || mask) in
     block_start, block_end
 
-  let block_of_range range =
+  let block_of_range_elt range =
     let rec limits blk_b blk_e = function
     | [] -> blk_b, blk_e
     | Coord coord :: l ->
@@ -314,6 +390,12 @@ and next buff = parse
     let blk_b, blk_e = limits "" "" range in
     ip blk_b, ip blk_e
 
+  let block_of_range range =
+    List.map block_of_range_elt range
+
+  let merge_range = (@)
+  let merge_hosts = (@)
+
   let compare addr1 addr2 = Pervasives.compare addr1 addr2
 
   let is_member addr cidr =
@@ -322,10 +404,13 @@ and next buff = parse
       (compare block_start addr < 0)
       (compare addr block_end < 0)
 
-  let are_members range cidr =
-    let range_start, range_end = block_of_range range in
+  let range_elt_is_member cidr range =
+    let range_start, range_end = block_of_range_elt range in
     Pervasives.(&&)
       (is_member range_start cidr)
       (is_member range_end cidr)
+
+  let are_members range cidr =
+    List.for_all (range_elt_is_member cidr) range
 
 }
