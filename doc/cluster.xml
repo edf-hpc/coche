@@ -32,7 +32,7 @@
 	</hardware>
 
 	<service name="mnt-remote">
-		<node classes="compute" type="commons" >
+		<node classes="compute" role="fs" type="commons" >
 			<mount name="scratch" mountpoint="/scratch" device="ibmds1@o2ib0,mds1@tcp0:ibmds2@o2ib0,mds2@tcp0:/lustrefs" fstype="lustrefs" size="204 TB">
 				<quota type="soft" target="user" size="250 GB" />
 				<quota type="hard" target="user" size="256 GB" />
@@ -46,7 +46,7 @@
 	</service>
 
 	<service name="commons">
-		<node classes="compute" type="commons" >
+		<node classes="compute" role="debian" type="commons" >
 			<packages status="installed" match="subset" >
 				<include>/etc/debian/installed</include>
 			</packages>
@@ -54,7 +54,7 @@
 				<kernel version="2.6.32-5-amd64" />
 			</system>
 		</node>
-		<node classes="compute" type="commons" >
+		<node classes="compute" role="rhel" type="commons" >
 			<packages status="installed" match="subset" >
 				<include>/etc/rhel/installed</include>
 			</packages>
@@ -65,7 +65,7 @@
 	</service>
 
 	<service name="dhcp">
-		<node classes="compute" type="server" ha="active-active" >
+		<node classes="compute" role="server" type="server" ha="active-active" >
 			<daemon name="isc-dhcp-server" status="running" />
 			<packages status="installed" match="subset" >
 				<list>isc-dhcp-server</list>
@@ -75,7 +75,7 @@
 			<file name="/etc/dhcp/install.rhel" owner="root" group="root" perms="0644" />
 			<file name="/etc/dhcp/dhcpd.conf" owner="root" group="root" perms="0644" same="no" />
 		</node>
-		<node classes="compute" type="client" >
+		<node classes="compute" role="client" type="client" >
 		</node>
 	</service>
 

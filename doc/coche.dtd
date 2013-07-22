@@ -51,6 +51,7 @@
 		<!ATTLIST service name CDATA #REQUIRED >
 		<!ELEMENT node ((mount | daemon | packages | system | file)*) >
 			<!ATTLIST node classes CDATA #REQUIRED >
+			<!ATTLIST node role CDATA #REQUIRED >
 			<!ATTLIST node type CDATA #IMPLIED >
 			<!ATTLIST node ha (active-active | active-passive) "active-passive">
 			<!ELEMENT mount (quota)* >

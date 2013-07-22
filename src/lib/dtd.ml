@@ -101,6 +101,7 @@ and service = {
 
 and node = {
   n_classes: classes;
+  n_role: string;
   n_type: string option;
   n_ha: ha option;
   n_desc: node_desc list;

@@ -373,6 +373,7 @@ let rec read_service classes nodes input =
         pop input;
         let attrs = flat attrs in
         let n_classes = List.assoc "classes" attrs in
+        let n_role = List.assoc "role" attrs in
         let n_type = try Some (List.assoc "type" attrs) with _ -> None in
         let n_ha = try Some (List.assoc "ha" attrs) with _ -> None in
         let n_ha = match option_map String.lowercase n_ha with
@@ -381,6 +382,7 @@ let rec read_service classes nodes input =
           | _ -> None in
         let nodes_desc = read_nodes [] input in
         let nodes = { n_classes = find_classes n_classes classes;
+                      n_role = n_role;
                       n_type = n_type;
                       n_ha = n_ha;
                       n_desc = nodes_desc } :: nodes in
