@@ -78,17 +78,17 @@ and hardware_desc =
     | Cpu of cpu
 
 and memory = {
-  swap: Size.t option;
-  ram: Size.t option;
+  swap: Units.Size.t option;
+  ram: Units.Size.t option;
 }
 
 and disk = {
   device: string;
-  size: Size.t option;
+  size: Units.Size.t option;
 }
 
 and cpu = {
-  maxfreq: Freq.t option;
+  maxfreq: Units.Freq.t option;
   ncores: int option;
   nsockets: int option;
   nthreads: int option;
@@ -121,14 +121,14 @@ and mount = {
   m_mountpoint: string;
   m_device: string;
   m_fstype: string option;
-  m_size: Size.t option;
+  m_size: Units.Size.t option;
   m_quota: quota list;
 }
 
 and quota = {
   q_type: [ `Soft | `Hard ];
   q_target: [ `User | `Group ];
-  q_size: Size.t;
+  q_size: Units.Size.t;
 }
 
 and daemon = {

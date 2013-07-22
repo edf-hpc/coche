@@ -240,19 +240,19 @@ let rec read_hardware hard input =
   match Xmlm.peek input with
     | `El_start ((_, "memory"), attrs) ->
         let attr_values = read_element_option "memory" ["swap"; "ram"] input in
-        let hard = Memory { swap = option_map Size.make (List.nth attr_values 0);
-                            ram = option_map Size.make (List.nth attr_values 1) } :: hard
+        let hard = Memory { swap = option_map Units.Size.make (List.nth attr_values 0);
+                            ram = option_map Units.Size.make (List.nth attr_values 1) } :: hard
         in
         read_hardware hard input
     | `El_start ((_, "disk"), attrs) ->
         let attr_values = read_element_option "disk" ["device"; "size"] input in
         let hard = Disk { device = read_option (List.nth attr_values 0);
-                          size = option_map Size.make (List.nth attr_values 1) } :: hard
+                          size = option_map Units.Size.make (List.nth attr_values 1) } :: hard
         in
         read_hardware hard input
     | `El_start ((_, "cpu"), attrs) ->
         let attr_values = read_element_option "cpu" ["maxfreq"; "ncores"] input in
-        let hard = Cpu { maxfreq = option_map Freq.make (List.nth attr_values 0);
+        let hard = Cpu { maxfreq = option_map Units.Freq.make (List.nth attr_values 0);
                          ncores = option_map int_of_string (List.nth attr_values 1);
                          nsockets = Some 0;
                          nthreads = Some 0 } :: hard
@@ -268,7 +268,7 @@ let rec read_quotas quotas input =
         let target = option_default "user" (List.nth attr_values 1) in
         let quotas = { q_type = if q_type = "soft" then `Soft else `Hard;
                        q_target = if target = "user" then `User else `Group;
-                       q_size = Size.make (read_option (List.nth attr_values 2)) } :: quotas in
+                       q_size = Units.Size.make (read_option (List.nth attr_values 2)) } :: quotas in
         read_quotas quotas input
     | _ -> quotas
 
@@ -304,7 +304,7 @@ let rec read_nodes nodes input =
                             m_mountpoint = read_option (List.nth attrs 2);
                             m_device = read_option (List.nth attrs 3);
                             m_fstype = List.nth attrs 4;
-                            m_size = option_map Size.make (List.nth attrs 5);
+                            m_size = option_map Units.Size.make (List.nth attrs 5);
                             m_quota = quotas } :: nodes in
         pop input;
         read_nodes nodes input
