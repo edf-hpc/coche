@@ -93,18 +93,6 @@ let read_element_base read_attrs element attr_names input =
 let read_element = read_element_base get_attrs
 let read_element_option = read_element_base get_attrs_option
 
-let option_map f = function
-  | None -> None
-  | Some o -> Some (f o)
-
-let option_default d = function
-  | None -> d
-  | Some o -> o
-
-let read_option = function
-  | Some o -> o
-  | None -> assert false
-
 let find_classes classes_names classes =
   let nc_classes = ExtString.String.nsplit classes_names "," in
   let classes = List.map (fun cl -> cl.c_name, cl) classes in
@@ -240,20 +228,20 @@ let rec read_hardware hard input =
   match Xmlm.peek input with
     | `El_start ((_, "memory"), attrs) ->
         let attr_values = read_element_option "memory" ["swap"; "ram"] input in
-        let hard = Memory { swap = option_map Units.Size.make (List.nth attr_values 0);
-                            ram = option_map Units.Size.make (List.nth attr_values 1) } :: hard
+        let hard = Memory { swap = Option.map Units.Size.make (List.nth attr_values 0);
+                            ram = Option.map Units.Size.make (List.nth attr_values 1) } :: hard
         in
         read_hardware hard input
     | `El_start ((_, "disk"), attrs) ->
         let attr_values = read_element_option "disk" ["device"; "size"] input in
-        let hard = Disk { device = read_option (List.nth attr_values 0);
-                          size = option_map Units.Size.make (List.nth attr_values 1) } :: hard
+        let hard = Disk { device = Option.get (List.nth attr_values 0);
+                          size = Option.map Units.Size.make (List.nth attr_values 1) } :: hard
         in
         read_hardware hard input
     | `El_start ((_, "cpu"), attrs) ->
         let attr_values = read_element_option "cpu" ["maxfreq"; "ncores"] input in
-        let hard = Cpu { maxfreq = option_map Units.Freq.make (List.nth attr_values 0);
-                         ncores = option_map int_of_string (List.nth attr_values 1);
+        let hard = Cpu { maxfreq = Option.map Units.Freq.make (List.nth attr_values 0);
+                         ncores = Option.map int_of_string (List.nth attr_values 1);
                          nsockets = Some 0;
                          nthreads = Some 0 } :: hard
         in
@@ -264,11 +252,11 @@ let rec read_quotas quotas input =
   match Xmlm.peek input with
     | `El_start ((_, "quota"), attrs) ->
         let attr_values = read_element_option "quota" ["type"; "target"; "size"] input in
-        let q_type = option_default "soft" (List.nth attr_values 0) in
-        let target = option_default "user" (List.nth attr_values 1) in
+        let q_type = Option.default "soft" (List.nth attr_values 0) in
+        let target = Option.default "user" (List.nth attr_values 1) in
         let quotas = { q_type = if q_type = "soft" then `Soft else `Hard;
                        q_target = if target = "user" then `User else `Group;
-                       q_size = Units.Size.make (read_option (List.nth attr_values 2)) } :: quotas in
+                       q_size = Units.Size.make (Option.get (List.nth attr_values 2)) } :: quotas in
         read_quotas quotas input
     | _ -> quotas
 
@@ -276,7 +264,7 @@ let rec read_system config input =
   match Xmlm.peek input with
     | `El_start ((_, "kernel"), attrs) ->
         let attr_values = read_element_option "kernel" ["version"; "arch"] input in
-        let version = read_option (List.nth attr_values 0) in
+        let version = Option.get (List.nth attr_values 0) in
         let arch = List.nth attr_values 1 in
         let config = Kernel { k_version = version; k_arch = arch } :: config in
         read_system config input
@@ -299,19 +287,19 @@ let rec read_nodes nodes input =
         let attrs = get_attrs_option attrs
           ["name"; "options"; "mountpoint"; "device"; "fstype"; "size"] in
         let quotas = read_quotas [] input in
-        let nodes = Mount { m_name = read_option (List.nth attrs 0);
+        let nodes = Mount { m_name = Option.get (List.nth attrs 0);
                             m_options = List.nth attrs 1;
-                            m_mountpoint = read_option (List.nth attrs 2);
-                            m_device = read_option (List.nth attrs 3);
+                            m_mountpoint = Option.get (List.nth attrs 2);
+                            m_device = Option.get (List.nth attrs 3);
                             m_fstype = List.nth attrs 4;
-                            m_size = option_map Units.Size.make (List.nth attrs 5);
+                            m_size = Option.map Units.Size.make (List.nth attrs 5);
                             m_quota = quotas } :: nodes in
         pop input;
         read_nodes nodes input
     | `El_start ((_, "daemon"), attrs) ->
         let attr_values = read_element_option "daemon" ["name"; "status"] input in
-        let status = read_option (List.nth attr_values 1) in
-        let nodes = Daemon { d_name = read_option (List.nth attr_values 0);
+        let status = Option.get (List.nth attr_values 1) in
+        let nodes = Daemon { d_name = Option.get (List.nth attr_values 0);
                              d_status = if status = "running" then `Running else `Stopped }
           :: nodes in
         read_nodes nodes input
@@ -346,7 +334,7 @@ let rec read_nodes nodes input =
           | Some r when String.lowercase r = "yes" -> true
           | _ -> false in
         let f_type =
-          match option_map String.lowercase (List.nth attr_values 5) with
+          match Option.map String.lowercase (List.nth attr_values 5) with
           | Some "file" -> Unix.S_REG
           | Some "directory" -> Unix.S_DIR
           | Some "chrdev" -> Unix.S_CHR
@@ -358,7 +346,7 @@ let rec read_nodes nodes input =
         let perms = match (List.nth attr_values 3) with
           | Some p -> Some (int_of_string ("0o" ^ p))
           | None -> None in
-        let nodes = File { f_name = read_option (List.nth attr_values 0);
+        let nodes = File { f_name = Option.get (List.nth attr_values 0);
                            f_owner = List.nth attr_values 1;
                            f_group = List.nth attr_values 2;
                            f_perms = perms;
@@ -376,7 +364,7 @@ let rec read_service classes nodes input =
         let n_role = List.assoc "role" attrs in
         let n_type = try Some (List.assoc "type" attrs) with _ -> None in
         let n_ha = try Some (List.assoc "ha" attrs) with _ -> None in
-        let n_ha = match option_map String.lowercase n_ha with
+        let n_ha = match Option.map String.lowercase n_ha with
           | Some "active-passive" -> Some Active_passive
           | Some "active-active" -> Some Active_active
           | _ -> None in
