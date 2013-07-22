@@ -19,29 +19,29 @@
 (****************************************************************************)
 
 type cluster = {
-  name : string;
-  version : string;
-  networks : network list;
-  classes : classes;
-  config : config list;
+  name: string;
+  version: string;
+  networks: network list;
+  classes: classes;
+  config: config list;
 }
 
 and network = {
-  n_name : string;
-  n_cidr : Network.cidr;
+  n_name: string;
+  n_cidr: Network.cidr;
 }
 
 and classes = netclass list
 
 and netclass = {
-  c_name : string;
-  c_type : string;
-  c_areas : area list;
-  c_default : area;
+  c_name: string;
+  c_type: string;
+  c_areas: area list;
+  c_default: area;
 }
 
 and area = {
-  a_name : string;
+  a_name: string;
   a_network: network;
   a_hosts: Network.hosts;
   a_range: Network.range;
@@ -53,7 +53,7 @@ and config =
     | Service of service
 
 and netconfig = {
-  nc_name : string;
+  nc_name: string;
   nc_classes: classes;
   nc_kind: kind;
   nc_devices: netdevice list;
