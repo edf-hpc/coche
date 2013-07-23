@@ -32,7 +32,7 @@ type error =
     | XML_file_not_DTD_compliant of string
     | Class_not_found of string
     | Area_not_found of string
-    | Class_not_unique of string
+    | Duplicate_elements of string * string list
     | Erroneous_tag_found of string * (int * int) * string * string
     | Missing_defaut_area of string
     | Error_while_reading_file of string

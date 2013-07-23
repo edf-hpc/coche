@@ -93,6 +93,23 @@ let read_element_base read_attrs element attr_names input =
 let read_element = read_element_base get_attrs
 let read_element_option = read_element_base get_attrs_option
 
+let unique_named_element name names l =
+  let module M = Map.Make(ExtString.String) in
+  let rec dups s = function
+  | [] -> s
+  | h::l -> if M.mem h s then
+        M.add h (M.find h s + 1) s
+    else
+        M.add h 1 s
+  in
+  let dups = dups M.empty names in
+  let dups = M.fold (fun k v a -> (k,v)::a) dups [] in
+  let dups = List.filter (fun (k,v) -> v > 1) dups in
+  let dups = List.map fst dups in
+  match dups with
+    | [] -> l
+    | _ -> raise (Duplicate_elements (name, dups))
+
 let find_classes classes_names classes =
   let nc_classes = ExtString.String.nsplit classes_names "," in
   let classes = List.map (fun cl -> cl.c_name, cl) classes in
@@ -189,7 +206,10 @@ let read_areas class_name classes netlist areas input =
             | None -> raise (Missing_defaut_area class_name)
           end
       | _ as a -> xml_error input "area" a
-  in read_areas classes netlist None areas input
+  in
+  let areas = read_areas classes netlist None areas input in
+  let area_names = List.map (fun a -> a.a_name) (fst areas) in
+  unique_named_element "area" area_names areas
 
 let rec read_classes netlist classes input =
   match Xmlm.peek input with
@@ -209,7 +229,9 @@ let rec read_classes netlist classes input =
     | `El_end ->
         pop input;
         classes
-    | _ ->  classes
+    | _ ->
+        let class_names = List.map (fun c -> c.c_name) classes in
+        unique_named_element "class" class_names classes
 
 let rec read_devices classes devices input =
   match Xmlm.peek input with
@@ -222,7 +244,9 @@ let rec read_devices classes devices input =
                         nd_state = state } :: devices
         in
         read_devices classes devices input
-    | _ -> devices
+    | _ ->
+        let device_names = List.map (fun d -> d.nd_name) devices in
+        unique_named_element "device" device_names devices
 
 let rec read_hardware hard input =
   match Xmlm.peek input with
@@ -379,7 +403,22 @@ let rec read_service classes nodes input =
     | `El_start ((_, "include"), attrs) ->
         let _included = read_data "include" input in (* FIXME *)
         read_service classes nodes input
-    | _ -> nodes
+    | _ ->
+        let node_names = List.map (fun n -> n.n_role) nodes in
+        unique_named_element "node" node_names nodes
+
+let unique_config config =
+  let services, hardware, netconfig = List.fold_left
+    (fun (services, hardware, netconfig) -> function
+    | Service s -> (s.s_name :: services), hardware, netconfig
+    | Hardware h -> services, (h.h_name :: hardware), netconfig
+    | Netconfig n -> services, hardware, (n.nc_name :: netconfig)
+    )
+    ([],[],[])
+    config in
+  ignore (unique_named_element "service" services config);
+  ignore (unique_named_element "hardware" hardware config);
+  unique_named_element "netconfig" netconfig config
 
 let rec read_config classes config input =
   match Xmlm.peek input with
@@ -421,9 +460,9 @@ let rec read_config classes config input =
         read_config classes config input
     | `El_end ->
         pop input;
-        config
+        unique_config config
     | _ ->
-        config
+        unique_config config
 
 let rec read_networks networks input =
   match Xmlm.peek input with
@@ -434,7 +473,8 @@ let rec read_networks networks input =
         read_networks networks input
     | `El_start ((_, tag), _) when tag <> "network" ->
         let netlist = List.map (fun n -> n.n_name, n) networks in
-        networks, netlist
+        let network_names = List.map fst netlist in
+        unique_named_element "network" network_names (networks, netlist)
     | _ as a-> xml_error input "network" a
 
 let rec read_cluster input =

@@ -32,7 +32,7 @@ type error =
     | XML_file_not_DTD_compliant of string
     | Class_not_found of string
     | Area_not_found of string
-    | Class_not_unique of string
+    | Duplicate_elements of string * string list
     | Erroneous_tag_found of string * (int * int) * string * string
     | Missing_defaut_area of string
     | Error_while_reading_file of string
@@ -72,8 +72,10 @@ let string_of_error = function
         sprintf "Class %s not found" s
     | Area_not_found s ->
         sprintf "Area %s not found" s
-    | Class_not_unique s ->
-        sprintf "Class %s is not uniquely defined" s
+    | Duplicate_elements (tag, names) ->
+        sprintf "Not uniquely defined %s elements: %s"
+          tag
+          (ExtString.String.join ", " names)
     | Erroneous_tag_found (file, (line, pos), signal, tag) ->
         sprintf "File \"%s\", line %d, characters 1-%d:\nErroneous tag %s found under a <%s ...>"
           file
