@@ -40,6 +40,7 @@ type error =
     | Invalid_size_description of string
     | Invalid_freq_multiplier of char
     | Invalid_freq_description of string
+    | File_not_readable_or_not_found of string
 
 exception Error of error
 
@@ -95,6 +96,8 @@ let string_of_error = function
         sprintf "Invalid freq multiplier %c" c
     | Invalid_freq_description s ->
         sprintf "Invalid freq description %s" s
+    | File_not_readable_or_not_found s ->
+        sprintf "File %s not found or not readable" s
 
 let raise e =
   raise (Error e)

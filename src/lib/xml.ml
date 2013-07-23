@@ -19,6 +19,7 @@
 (****************************************************************************)
 
 open Dtd
+open Utils
 open Errors
 
 let dtd_file = "coche.dtd"
@@ -297,11 +298,24 @@ let rec read_system config input =
 let rec read_packages packages input =
   match Xmlm.peek input with
     | `El_start ((_, "list"), attrs) ->
-        let list = read_data "list" input in
-        read_packages ([list] :: packages) input
+        let list = read_data "list" input
+          $ ExtString.String.nsplit ","
+          $ List.map ExtString.String.strip in
+        read_packages (ExtList.List.unique list :: packages) input
     | `El_start ((_, "include"), attrs) ->
         let file = read_data "include" input in
-        read_packages ([file] :: packages) input
+        begin try
+            let () = Unix.access file [ Unix.R_OK ] in
+            let lines = Std.input_list (open_in file) in
+            let lines = List.filter
+              (fun l -> not (ExtString.String.starts_with l "#"))
+              lines in
+            let lines = List.map ExtString.String.strip lines in
+            read_packages (ExtList.List.unique lines :: packages) input
+          with Unix.Unix_error _ ->
+            warn (File_not_readable_or_not_found file);
+            read_packages packages input
+        end
     | _ -> packages
 
 let rec read_nodes nodes input =
@@ -338,7 +352,7 @@ let rec read_nodes nodes input =
           then `Exact
           else `Subset
         in
-        let packages = read_packages [] input in
+        let packages = read_packages [] input $ List.flatten $ ExtList.List.unique in
         let nodes = Packages { p_status = p_status; p_match = p_match; p_list = packages }
           :: nodes in
         pop input;

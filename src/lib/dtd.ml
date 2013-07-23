@@ -140,7 +140,7 @@ and daemon = {
 and packages = {
   p_status: [ `Installed | `Absent ];
   p_match: [ `Exact | `Subset ];
-  p_list: packages_desc list;
+  p_list: packages_desc;
 }
 
 and pstatus = Installed | Absent
