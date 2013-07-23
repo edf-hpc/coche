@@ -104,9 +104,9 @@ let unique_named_element name names l =
         M.add h 1 s
   in
   let dups = dups M.empty names in
-  let dups = M.fold (fun k v a -> (k,v)::a) dups [] in
-  let dups = List.filter (fun (k,v) -> v > 1) dups in
-  let dups = List.map fst dups in
+  let dups = M.fold (fun k v a -> (k,v)::a) dups [] 
+    $ List.filter (fun (k,v) -> v > 1)
+    $ List.map fst in
   match dups with
     | [] -> l
     | _ -> raise (Duplicate_elements (name, dups))
