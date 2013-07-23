@@ -210,14 +210,6 @@ and read_hosts buff = parse
       tail
     in Coord subnet :: tail
 
-  let rec uniq = function
-  | [] -> []
-  | h::l ->
-      if List.mem h l then
-        uniq l
-      else
-        h :: uniq l
-
   let rec extract_first = function
   | [] -> [], []
   | [Range (b, e)] ->
