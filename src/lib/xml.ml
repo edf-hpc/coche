@@ -177,14 +177,20 @@ let read_areas class_name classes netlist areas input =
     match Xmlm.peek input with
       | `El_start ((_, "area"), attrs) ->
           let attr_values = read_element "area" ["name"; "network"; "hosts"; "iprange"] input in
-          let network = List.assoc (List.nth attr_values 1) netlist in
-          let areas =
-            { a_name = List.nth attr_values 0;
-              a_network = network;
-              a_hosts = Network.hosts (List.nth attr_values 2);
-              a_range = Network.range (List.nth attr_values 3) }
-            :: areas in
-          read_areas classes netlist default areas input
+          begin try
+              let network = List.assoc (List.nth attr_values 1) netlist in
+              let a_hosts = Network.hosts (List.nth attr_values 2) in
+              let a_range = Network.range (List.nth attr_values 3) in
+              let areas =
+                { a_name = List.nth attr_values 0;
+                  a_network = network;
+                  a_hosts = a_hosts;
+                  a_range = a_range }
+                :: areas in
+              read_areas classes netlist default areas input
+            with Not_found ->
+              raise (Network_not_found (List.nth attr_values 1))
+          end
       | `El_start ((_, "include"), _) ->
           let included_class = read_data "include" input in
           let included_class = find_class included_class classes in
