@@ -35,6 +35,8 @@ type error =
     | Class_not_found of string
     | Area_not_found of string
     | Network_not_found of string
+    | Hostlist_and_range_have_different_sizes of string * string
+    | Range_is_not_in_defined_network of string * string
     | Duplicate_elements of string * string list
     | Erroneous_tag_found of string * position * string * string
     | Missing_defaut_area of string
@@ -78,6 +80,14 @@ let string_of_error = function
         sprintf "Area %s not found" s
     | Network_not_found s ->
         sprintf "Network %s not found" s
+    | Hostlist_and_range_have_different_sizes (hosts, range) ->
+        sprintf "Hostlist %s and address range %s have different size"
+          hosts
+          range
+    | Range_is_not_in_defined_network (range, network) ->
+        sprintf "Addresses in range %s are not members of %s"
+          range
+          network
     | Duplicate_elements (tag, names) ->
         sprintf "Not uniquely defined %s elements: %s"
           tag

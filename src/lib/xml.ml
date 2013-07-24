@@ -181,13 +181,24 @@ let read_areas class_name classes netlist areas input =
               let network = List.assoc (List.nth attr_values 1) netlist in
               let a_hosts = Network.hosts (List.nth attr_values 2) in
               let a_range = Network.range (List.nth attr_values 3) in
-              let areas =
-                { a_name = List.nth attr_values 0;
-                  a_network = network;
-                  a_hosts = a_hosts;
-                  a_range = a_range }
-                :: areas in
-              read_areas classes netlist default areas input
+              if   (Network.expand_hosts a_hosts $ List.length)
+                <> (Network.expand_range a_range $ List.length)
+              then
+                raise (Hostlist_and_range_have_different_sizes
+                          (Network.string_of_hosts a_hosts,
+                           Network.string_of_range a_range))
+              else if Network.are_members a_range network.n_cidr then
+                let areas =
+                  { a_name = List.nth attr_values 0;
+                    a_network = network;
+                    a_hosts = a_hosts;
+                    a_range = a_range }
+                  :: areas in
+                read_areas classes netlist default areas input
+              else
+                raise (Range_is_not_in_defined_network
+                          (Network.string_of_range a_range,
+                           Network.string_of_cidr network.n_cidr))
             with Not_found ->
               raise (Network_not_found (List.nth attr_values 1))
           end

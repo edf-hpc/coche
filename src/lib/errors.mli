@@ -35,6 +35,8 @@ type error =
     | Class_not_found of string
     | Area_not_found of string
     | Network_not_found of string
+    | Hostlist_and_range_have_different_sizes of string * string
+    | Range_is_not_in_defined_network of string * string
     | Duplicate_elements of string * string list
     | Erroneous_tag_found of string * position * string * string
     | Missing_defaut_area of string
