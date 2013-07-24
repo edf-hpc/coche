@@ -133,6 +133,9 @@ let merge_2_areas a1 a2 =
             a_range = Network.merge_range a1.a_range a2.a_range
   }
 
+let merge_2_nodes n1 n2 =
+  { n1 with n_desc = n1.n_desc @ n2.n_desc }
+
 let find_area area_name classes =
   let areas = List.fold_left
     (fun areas netclass ->
@@ -171,6 +174,23 @@ let merge_areas a1 a2 =
       a1
       a2 in
   List.map snd new_a
+
+let merge_nodes n1 n2 =
+  let n1 = List.map (fun n -> n.n_role, n) n1 in
+  let n2 = List.map (fun n -> n.n_role, n) n2 in
+  let new_n =
+    List.fold_left
+      (fun nodes (name, node) ->
+        try
+          let old_node = List.assoc name nodes in
+          let new_node = merge_2_nodes node old_node in
+          (name, new_node)::(List.remove_assoc name nodes)
+        with _ ->
+          (name, node)::nodes
+      )
+      n1
+      n2 in
+  List.map snd new_n
 
 let read_areas class_name classes netlist areas input =
   let rec read_areas classes netlist default areas input =
@@ -410,7 +430,7 @@ let rec read_nodes nodes input =
         read_nodes nodes input
     | _ -> nodes
 
-let rec read_service classes nodes input =
+let rec read_service services classes nodes input =
   match Xmlm.peek input with
     | `El_start ((_, "node"), attrs) ->
         pop input;
@@ -430,10 +450,16 @@ let rec read_service classes nodes input =
                       n_ha = n_ha;
                       n_desc = nodes_desc } :: nodes in
         pop input;
-        read_service classes nodes input
+        read_service services classes nodes input
     | `El_start ((_, "include"), attrs) ->
-        let _included = read_data "include" input in (* FIXME *)
-        read_service classes nodes input
+        let included = read_data "include" input in
+        begin try
+            let included = List.assoc included services in
+            let nodes = merge_nodes nodes included.s_nodes in
+            read_service services classes nodes input
+          with Not_found ->
+            raise (Service_not_found included)
+        end
     | _ ->
         let node_names = List.map (fun n -> n.n_role) nodes in
         unique_named_element "node" node_names nodes
@@ -450,6 +476,15 @@ let unique_config config =
   ignore (unique_named_element "service" services config);
   ignore (unique_named_element "hardware" hardware config);
   unique_named_element "netconfig" netconfig config
+
+let find_services list =
+  List.fold_left
+    (fun acc -> function
+    | Service s -> (s.s_name, s) :: acc
+    | _ -> acc
+    )
+    []
+    list
 
 let rec read_config classes config input =
   match Xmlm.peek input with
@@ -485,7 +520,7 @@ let rec read_config classes config input =
         pop input;
         let attrs = flat attrs in
         let name = List.assoc "name" attrs in
-        let nodes = read_service classes [] input in
+        let nodes = read_service (find_services config) classes [] input in
         let config = Service { s_name = name; s_nodes = nodes } :: config in
         pop input;
         read_config classes config input
