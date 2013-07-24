@@ -18,6 +18,8 @@
 (*                                                                          *)
 (****************************************************************************)
 
+type position = int * int
+
 type error =
     | Cannot_mix_different_kind_of_ranges
     | IP_ranges_with_different_depths
@@ -34,7 +36,7 @@ type error =
     | Area_not_found of string
     | Network_not_found of string
     | Duplicate_elements of string * string list
-    | Erroneous_tag_found of string * (int * int) * string * string
+    | Erroneous_tag_found of string * position * string * string
     | Missing_defaut_area of string
     | Error_while_reading_file of string
     | Invalid_size_multiplier of char
@@ -87,7 +89,7 @@ let string_of_error = function
           pos
           signal
           tag
-    | Missing_defaut_area s (* class name *) ->
+    | Missing_defaut_area s ->
         sprintf "Missing default area in class %s" s
     | Error_while_reading_file s ->
         sprintf "Error while reading file %s" s
