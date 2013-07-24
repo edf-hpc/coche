@@ -7,3 +7,6 @@
 *.cmx
 *.cmxs
 *.cmxa
+*.native
+*.byte
+_build
