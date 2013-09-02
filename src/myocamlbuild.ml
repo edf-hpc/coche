@@ -66,5 +66,16 @@ let () =
              List.iter flag ["ocamldep"; "compile"; "link"; "doc"])
           packages;
 
+        (* C stubs *)
+        flag ["link"; "library"; "ocaml"; "byte"; "use_libcoche"]
+          (S[A"-dllib"; A"-lcoche"; A"-cclib"; A"-lcoche"]);
+        flag ["link"; "library"; "ocaml"; "native"; "use_libcoche"]
+          (S[A"-cclib"; A"-lcoche"]);
+        flag ["link"; "library"; "ocaml"; "native"; "use_libcoche"]
+          (S[A"-cclib"; A"-lcoche"]);
+        flag ["link"; "program"; "ocaml"; "byte"; "use_libcoche"]
+          (S[A"-dllib"; A"-lcoche"]);
+        dep  ["link"; "ocaml"; "use_libcoche"] ["lib/libcoche.a"];
+
     | _ -> ()
   end
