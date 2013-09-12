@@ -316,15 +316,18 @@ and read_hosts buff = parse
     with _ ->
       raise (Invalid_IP_address_description s)
 
+  let compare_ipv4 ip1 ip2 =
+    Pervasives.compare (ip ip1) (ip ip2)
+
   let expand_range r =
     (* WARNING: We do not remove duplicates intentionally! *)
     let r = List.flatten (List.map (expand_range_elt [""]) r) in
-    List.sort Pervasives.compare r
+    List.sort compare_ipv4 r
 
   let expand_hosts h =
     (* WARNING: We do not remove duplicates intentionally! *)
     let h = List.flatten (List.map (expand_hosts_elt [""]) h) in
-    List.sort Pervasives.compare h
+    List.sort compare_ipv4 h
 
   let expand_ip_range r =
     List.map ip (expand_range r)
