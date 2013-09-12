@@ -265,13 +265,14 @@ and read_hosts buff = parse
   | (IpRange ((b,e)::_)) :: _ when b > e ->
       raise IP_range_with_non_ordered_elements
   | (IpRange ((b,e)::l)) :: tl when b = e ->
-      expand_range_elt (expand_range_elt prefixes [Coord b]) [IpRange l]
+      let prefixes = expand_range_elt (expand_range_elt prefixes [Coord b]) [IpRange l] in
+      expand_range_elt prefixes tl
   | (IpRange ((b,e)::l)) :: tl ->
       let first =
         let prefixes = expand_range_elt prefixes [Coord b] in
         let subnets = List.map (fun (b,_) -> Range (b, max)) l in
         let real_first, rest = extract_first subnets in
-        expand_range_elt prefixes real_first @ expand_range_elt prefixes (option_to_list rest)
+        expand_range_elt prefixes real_first @ Option.map_default (expand_range_elt prefixes) [] rest
       in
       let middle =
         if b+1 < e then
@@ -284,7 +285,7 @@ and read_hosts buff = parse
         let prefixes = expand_range_elt prefixes [Coord e] in
         let subnets = List.map (fun (_,e) -> Range (min, e)) l in
         let real_last, rest = extract_last subnets in
-        expand_range_elt prefixes real_last @ expand_range_elt prefixes (option_to_list rest)
+        expand_range_elt prefixes real_last @ Option.map_default (expand_range_elt prefixes) [] rest
 
       in
       expand_range_elt (first @ middle @ last) tl
