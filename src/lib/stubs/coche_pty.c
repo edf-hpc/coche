@@ -1,6 +1,8 @@
 /*
- * 
  * Original file "pty.c", from Unison 2.32.52.
+ *
+ * Changed to suit our own needs. For instance, we don't use openpty(3)
+ * any longer and replaced it by forkpty(3) which is more convenient.
  * 
  * Copyright © 1999-2009 Benjamin Pierce et al
  * 
@@ -58,15 +60,16 @@ CAMLprim value setControllingTerminal(value fdVal) {
   return Val_unit;
 }
 
-/* openpty: unit -> (Unix.file_descr * Unix.file_descr) */
-CAMLprim value c_openpty() {
-  int master,slave;
+/* c_forkpty: unit -> (int * Unix.file_descr) */
+CAMLprim value c_forkpty() {
+  int master;
+  pid_t pid;
   value pair;
-  if (openpty(&master,&slave,NULL,NULL,NULL) < 0)
-    uerror("openpty", (value) 0);
+  if ((pid = forkpty(&master,NULL,NULL,NULL)) < 0)
+    uerror("forkpty", (value) 0);
   pair = alloc_tuple(2);
-  Store_field(pair,0,Val_int(master));
-  Store_field(pair,1,Val_int(slave));
+  Store_field(pair,0,Val_int(pid));
+  Store_field(pair,1,Val_int(master));
   return pair;
 }
 
@@ -76,8 +79,8 @@ CAMLprim value setControllingTerminal(value fdVal) {
   unix_error (ENOSYS, "setControllingTerminal", NULL);
 }
 
-CAMLprim value c_openpty() {
-  unix_error (ENOSYS, "openpty", NULL);
+CAMLprim value c_forkpty() {
+  unix_error (ENOSYS, "forkpty", NULL);
 }
 
 #endif
