@@ -47,6 +47,8 @@ type error =
     | Invalid_freq_multiplier of char
     | Invalid_freq_description of string
     | File_not_readable_or_not_found of string
+    | Forkpty_failed of Unix.error
+    | Unix of Unix.error
 
 exception Error of error
 
@@ -116,6 +118,10 @@ let string_of_error = function
         sprintf "Invalid freq description %s" s
     | File_not_readable_or_not_found s ->
         sprintf "File %s not found or not readable" s
+    | Forkpty_failed error ->
+        sprintf "Forkpty failed: %s" (Unix.error_message error)
+    | Unix error ->
+        sprintf "Unix error: %s" (Unix.error_message error)
 
 let raise e =
   raise (Error e)

@@ -47,6 +47,8 @@ type error =
     | Invalid_freq_multiplier of char
     | Invalid_freq_description of string
     | File_not_readable_or_not_found of string
+    | Forkpty_failed of Unix.error
+    | Unix of Unix.error
 
 exception Error of error
 
