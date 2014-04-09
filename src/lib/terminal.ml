@@ -18,78 +18,97 @@
 (*                                                                          *)
 (****************************************************************************)
 
-external dumpFd : Unix.file_descr -> int = "%identity"
+open Errors
 
-external setControllingTerminal : Unix.file_descr -> unit =
-  "setControllingTerminal"
-external c_openpty : unit -> Unix.file_descr * Unix.file_descr =
-  "c_openpty"
-
-let openpty () =
-  try
-    Some (c_openpty ())
-  with Unix.Unix_error _ ->
-    None
-
-let passwordRx =
-  ".*assword:[ ]*"
-let passphraseRx =
-  "Enter passphrase for key.*"
-let authenticityRx =
-  "The authenticity of host .* continue connecting \\(yes/no\\)\\? "
-
-(* Utility functions copied from ocaml's unix.ml because they are not exported :-| *)
-let rec safe_dup fd =
-  let new_fd = Unix.dup fd in
-  if dumpFd new_fd >= 3 then
-    new_fd
-  else begin
-    let res = safe_dup fd in
-    Unix.close new_fd;
-    res
-  end
-
-let safe_close fd = try Unix.close fd with Unix.Unix_error _ -> ()
-
-let perform_redirections new_stdin new_stdout new_stderr =
-  let newnewstdin = safe_dup new_stdin in
-  let newnewstdout = safe_dup new_stdout in
-  let newnewstderr = safe_dup new_stderr in
-  safe_close new_stdin;
-  safe_close new_stdout;
-  safe_close new_stderr;
-  Unix.dup2 newnewstdin Unix.stdin; Unix.close newnewstdin;
-  Unix.dup2 newnewstdout Unix.stdout; Unix.close newnewstdout;
-  Unix.dup2 newnewstderr Unix.stderr; Unix.close newnewstderr
+external c_forkpty : unit -> int * Unix.file_descr =
+  "c_forkpty"
+let forkpty() = try Some (c_forkpty ()) with Unix.Unix_error _ -> None
 
 (* Like Unix.create_process except that we also try to set up a
    controlling terminal for the new process.  If successful, a file
    descriptor for the master end of the controlling terminal is
    returned. *)
-let create_session cmd args new_stdin new_stdout new_stderr =
-  match openpty () with
-    None ->
-      (None,
-       Unix.create_process cmd args new_stdin new_stdout new_stderr)
-    | Some (masterFd, slaveFd) ->
-        begin match Unix.fork () with
-            0 ->
-              begin try
-                  Unix.close masterFd;
-                  ignore (Unix.setsid ());
-                  setControllingTerminal slaveFd;
-                  (* WARNING: SETTING ECHO TO FALSE! *)
-                  let tio = Unix.tcgetattr slaveFd in
-                  tio.Unix.c_echo <- false;
-                  Unix.tcsetattr slaveFd Unix.TCSANOW tio;
-                  perform_redirections new_stdin new_stdout new_stderr;
-                  Unix.execvp cmd args (* never returns *)
-                with _ ->
-                  Printf.eprintf "Some error in create_session child\n";
-                  flush stderr;
-                  exit 127
-              end
-          | childPid ->
-              Unix.close slaveFd;
-              (Some masterFd, childPid)
-        end
+let create_session cmd args =
+  match forkpty () with
+  | None ->
+      raise (Errors.Forkpty_failed (Unix.EUNKNOWNERR 0))
+  | Some (0, _) ->
+      begin try
+        Unix.execvp cmd args (* never returns *)
+      with Unix.Unix_error (error, _, _) ->
+        raise (Errors.Forkpty_failed error)
+     end
+  | Some (childPid, masterFd) ->
+      (Some masterFd, childPid)
+
+let passwordRx =
+  Pcre.regexp ".*assword:[ ]*$"
+let passphraseRx =
+  Pcre.regexp "Enter passphrase for key.*"
+let authenticityRx =
+  Pcre.regexp "continue connecting \\(yes/no\\)\\?[ ]*$"
+let knownhostsRx =
+  Pcre.regexp "Warning: Permanently added .* to the list of known hosts."
+
+let read_msg fd =
+  let buf_len = 1024 in
+  let buffer = String.create buf_len in
+  let len = Unix.read fd buffer 0 buf_len in
+  if len <= 0 then
+    raise (Errors.Unix Unix.EBADF)
+  else begin
+    let s = String.sub buffer 0 len in
+    s
+  end
+
+let write_msg fd msg =
+  ignore(Unix.write fd (msg^"\n") 0 (String.length msg + 1))
+
+let rec interact fdTerm =
+  let first_msg = read_msg fdTerm in
+  let msg =
+    if Pcre.pmatch ~rex:authenticityRx first_msg then begin
+      write_msg fdTerm "yes";
+      let tmp = read_msg fdTerm in
+      if tmp = "\r\n" || Pcre.pmatch ~rex:knownhostsRx tmp then
+        read_msg fdTerm
+      else
+        tmp
+    end
+    else
+      first_msg
+  in
+  let rec auth msg =
+    if Pcre.pmatch ~rex:passwordRx msg || Pcre.pmatch ~rex:passphraseRx msg then begin
+      write_msg fdTerm (Unix.getenv "COCHE_PASSWORD")
+    end
+    else
+      let msg = read_msg fdTerm in
+      if msg <> "\r\n"
+      then auth msg
+  in
+  let () = auth msg in
+  let msg =
+    let tmp = read_msg fdTerm in
+    if tmp = "\r\n" then begin
+      read_msg fdTerm
+    end else
+      tmp
+  in
+  if Pcre.pmatch ~rex:passwordRx msg then
+    failwith "password failed"
+  else begin
+    Printf.printf "Got msg (last): %s\n%!" msg;
+    let msg = read_msg fdTerm in
+    Printf.printf "Got msg (last): %s\n%!" msg;
+  end
+
+let run cmd args =
+  match fst (create_session cmd args) with
+  | Some fdTerm ->
+    interact fdTerm
+  | None ->
+    assert false (* create_session nevers returns None *)
+
+let _ (* main *) =
+  run "ssh" [| "-e none"; "-q"; Unix.getenv "COCHE_HOST"; "ls"; "-a"; "/tmp"|]
