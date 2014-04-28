@@ -48,6 +48,7 @@ type error =
     | Invalid_freq_description of string
     | File_not_readable_or_not_found of string
     | Forkpty_failed of Unix.error
+    | Authentification_failed of string
     | Unix of Unix.error
 
 exception Error of error
@@ -120,6 +121,8 @@ let string_of_error = function
         sprintf "File %s not found or not readable" s
     | Forkpty_failed error ->
         sprintf "Forkpty failed: %s" (Unix.error_message error)
+    | Authentification_failed host ->
+        sprintf "Authentification error on host %s" host
     | Unix error ->
         sprintf "Unix error: %s" (Unix.error_message error)
 

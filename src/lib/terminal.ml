@@ -50,10 +50,25 @@ let authenticityRx =
 let knownhostsRx =
   Pcre.regexp "Warning: Permanently added .* to the list of known hosts."
 
+let buf_size = 4096
+
+let rec read_all buf fd =
+  try
+    let temp = String.create buf_size in
+    let len = Unix.read fd temp 0 buf_size in
+    if len <= 0 then
+      Pervasives.raise Exit
+    else
+      let () = Buffer.add_substring buf temp 0 len in
+      read_all buf fd
+  with _ ->
+    let final = Buffer.contents buf in
+    Buffer.reset buf;
+    final
+
 let read_msg fd =
-  let buf_len = 1024 in
-  let buffer = String.create buf_len in
-  let len = Unix.read fd buffer 0 buf_len in
+  let buffer = String.create buf_size in
+  let len = Unix.read fd buffer 0 buf_size in
   if len <= 0 then
     raise (Errors.Unix Unix.EBADF)
   else begin
@@ -62,9 +77,9 @@ let read_msg fd =
   end
 
 let write_msg fd msg =
-  ignore(Unix.write fd (msg^"\n") 0 (String.length msg + 1))
+  ignore (Unix.write fd (msg ^ "\n") 0 (String.length msg + 1))
 
-let rec interact fdTerm =
+let rec interact fdTerm host password =
   let first_msg = read_msg fdTerm in
   let msg =
     if Pcre.pmatch ~rex:authenticityRx first_msg then begin
@@ -78,37 +93,49 @@ let rec interact fdTerm =
     else
       first_msg
   in
-  let rec auth msg =
-    if Pcre.pmatch ~rex:passwordRx msg || Pcre.pmatch ~rex:passphraseRx msg then begin
-      write_msg fdTerm (Unix.getenv "COCHE_PASSWORD")
-    end
+  let rec send_passkey msg =
+    if Pcre.pmatch ~rex:passwordRx msg || Pcre.pmatch ~rex:passphraseRx msg then
+      begin
+        write_msg fdTerm password;
+        ignore (read_msg fdTerm) (* Expecting \r\n *)
+      end
     else
       let msg = read_msg fdTerm in
       if msg <> "\r\n"
-      then auth msg
+      then send_passkey msg
   in
-  let () = auth msg in
-  let msg =
-    let tmp = read_msg fdTerm in
-    if tmp = "\r\n" then begin
-      read_msg fdTerm
-    end else
-      tmp
-  in
-  if Pcre.pmatch ~rex:passwordRx msg then
-    failwith "password failed"
-  else begin
-    Printf.printf "Got msg (last): %s\n%!" msg;
-    let msg = read_msg fdTerm in
-    Printf.printf "Got msg (last): %s\n%!" msg;
-  end
+  let () = send_passkey msg in
+  let msg = read_msg fdTerm in
+  if Pcre.pmatch ~rex:passwordRx msg || Pcre.pmatch ~rex:passphraseRx msg then
+    raise (Errors.Authentification_failed host)
+  else
+    let buffer = Buffer.create buf_size in
+    let () = Buffer.add_string buffer msg in
+    read_all buffer fdTerm
 
-let run cmd args =
+let run host password cmd args =
   match fst (create_session cmd args) with
   | Some fdTerm ->
-    interact fdTerm
+    interact fdTerm host password
   | None ->
     assert false (* create_session nevers returns None *)
 
-let _ (* main *) =
-  run "ssh" [| "-e none"; "-q"; Unix.getenv "COCHE_HOST"; "ls"; "-a"; "/tmp"|]
+let common_args host =
+  [| "-e none";
+     "-o ConnectTimeout=1";
+     "-o ConnectionAttempts=1";
+     "-q";
+     host;
+  |]
+
+let ssh host password command =
+  let args = Array.append (common_args host) command in
+  run host password "ssh" args
+
+let scp host password files destination =
+  let args = Array.concat
+    [ common_args "-r";
+      files;
+      [| Printf.sprintf "%s:%s" host destination |]
+    ] in
+  run host password "scp" args
