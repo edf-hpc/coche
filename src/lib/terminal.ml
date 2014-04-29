@@ -93,19 +93,18 @@ let rec interact fdTerm host password =
     else
       first_msg
   in
-  let rec send_passkey msg =
+  let msg =
     if Pcre.pmatch ~rex:passwordRx msg || Pcre.pmatch ~rex:passphraseRx msg then
       begin
         write_msg fdTerm password;
-        ignore (read_msg fdTerm) (* Expecting \r\n *)
+        let tmp = read_msg fdTerm in
+        if tmp = "\r\n" then
+          read_msg fdTerm
+        else tmp
       end
     else
-      let msg = read_msg fdTerm in
-      if msg <> "\r\n"
-      then send_passkey msg
+      msg
   in
-  let () = send_passkey msg in
-  let msg = read_msg fdTerm in
   if Pcre.pmatch ~rex:passwordRx msg || Pcre.pmatch ~rex:passphraseRx msg then
     raise (Errors.Authentification_failed host)
   else
