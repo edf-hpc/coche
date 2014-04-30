@@ -24,7 +24,7 @@
 		<device name="eth0" target="local" state="up" />
 	</netconfig>
 
-	<hardware name="default">
+	<hardware name="default" classes="debian" >
 		<cpu ncores="16" maxfreq="2.7 GHz" />
 		<memory ram="132264244" swap="129163256" />
 		<disk device="/dev/sda" size="488386584" />

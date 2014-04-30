@@ -33,6 +33,7 @@
 			<!ATTLIST device state (up | down) "up">
 	<!ELEMENT hardware (memory|disk|cpu)* >
 		<!ATTLIST hardware name CDATA #REQUIRED >
+		<!ATTLIST hardware classes CDATA #REQUIRED >
 		<!ELEMENT memory EMPTY >
 			<!-- swap : swap space size in kb -->
 			<!ATTLIST memory swap CDATA #IMPLIED >
