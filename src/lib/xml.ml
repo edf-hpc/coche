@@ -512,8 +512,12 @@ let rec read_config classes config input =
     | `El_start ((_, "hardware"), attrs) ->
         pop input;
         let name = List.assoc "name" (flat attrs) in
+        let n_classes = List.assoc "classes" (flat attrs) in
         let hardware = read_hardware [] input in
-        let config = Hardware {h_name = name; h_desc = hardware } :: config in
+        let hardware = Hardware {h_name = name;
+                                 h_classes = find_classes n_classes classes;
+                                 h_desc = hardware } in
+        let config = hardware :: config in
         pop input;
         read_config classes config input
     | `El_start ((_, "service"), attrs) ->

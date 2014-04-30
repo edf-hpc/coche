@@ -69,6 +69,7 @@ and netdevice = {
 
 and hardware = {
   h_name: string;
+  h_classes: classes;
   h_desc: hardware_desc list;
 }
 
