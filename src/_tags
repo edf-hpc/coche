@@ -1,5 +1,6 @@
 true: annot, debug
-"lib": include
+<lib> or <subcommands>: include
 <lib/size.cm*> or <lib/freq.cm*>: for-pack(Units)
-<lib/coche.cm{x,}a>: use_libcoche
+<cocheLib.cm{x,}a>: use_libcoche
+<coche.*>: coche
 <**/*.{byte,native}>: use_libcoche

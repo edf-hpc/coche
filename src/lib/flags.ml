@@ -18,32 +18,4 @@
 (*                                                                          *)
 (****************************************************************************)
 
-module Arg = CocheArg
-
-let usage_msg = Printf.sprintf "%s subcommand [options]\n%s"
-  (Filename.basename Sys.argv.(0))
-  (Subcommand.help ())
-
-let spec = ref (
-  Arg.align [
-    "-verbose", Arg.Set Flags.verbose, " Enable verbose mode";
-  ])
-
-let () = Arg.parse_dynamic
-  spec
-  (fun arg ->
-    if !Arg.current = 1 then begin
-      try
-        let sc = Subcommand.get_by_name (String.lowercase arg) in
-        Subcommand.selected_sc := Some sc;
-        spec := !spec @ sc.Subcommand.spec
-      with Not_found ->
-        raise (Arg.Bad ("unknown subcommand " ^ arg))
-    end
-  )
-  usage_msg
-
-let main =
-  match !Subcommand.selected_sc with
-    | None -> Arg.usage !spec usage_msg
-    | Some sc -> sc.Subcommand.main ()
+let verbose = ref false

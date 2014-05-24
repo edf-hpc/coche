@@ -23,6 +23,7 @@ open Ocamlbuild_plugin
 
 let name = "ben"
 let packages = [
+  "unix";
   "extlib";
   "xmlm";
   "pcre";
@@ -46,7 +47,16 @@ let best =
   with Not_found -> if has_ocamlopt then "native" else "byte"
 let () = if not (try_exec "ocamlfind printconf") then raise Require_findlib
 let () = List.iter require packages
-let main_executable = sprintf "%s.%s" name best
+
+let subcommands =
+  let cmds = Array.to_list (Sys.readdir "subcommands") in
+  List.map (fun subcommand -> "subcommands/" ^ (Filename.chop_extension subcommand)) cmds
+
+let cmx_subcommands =
+  List.map (fun subcommand -> subcommand ^ ".cmx") subcommands
+
+let cmo_subcommands =
+  List.map (fun subcommand -> subcommand ^ ".cmo") subcommands
 
 let () =
   dispatch begin function
@@ -56,7 +66,7 @@ let () =
         Options.ocamlopt := ocamlfind "ocamlopt";
         Options.ocamldep := ocamlfind "ocamldep";
         Options.ocamldoc := ocamlfind "ocamldoc";
-        Pathname.define_context "lib/benlib" ["lib"];
+        Options.ocamlmklib := ocamlfind "ocamlmklib";
 
     | After_rules ->
         flag ["ocaml"; "link"; "program"] & A"-linkpkg";
@@ -66,6 +76,17 @@ let () =
              List.iter flag ["ocamldep"; "compile"; "link"; "doc"])
           packages;
 
+        (* -lutil is needed in order to use forkpty *)
+        flag ["ocamlmklib"; "c"] (S[A "-lutil"]);
+
+        (* subcommands *)
+        dep ["coche"; "byte"] & cmo_subcommands;
+        dep ["coche"; "native"] & cmx_subcommands;
+
+        (* cocheLib *)
+        flag ["ocaml"; "link"; "byte"; "use_cochelib"] & A"cocheLib.cma";
+        flag ["ocaml"; "link"; "native"; "use_cochelib"] & A"cocheLib.cmxa";
+
         (* C stubs *)
         flag ["link"; "library"; "ocaml"; "byte"; "use_libcoche"]
           (S[A"-dllib"; A"-lcoche"; A"-cclib"; A"-lcoche"]);
@@ -74,7 +95,7 @@ let () =
         flag ["link"; "library"; "ocaml"; "native"; "use_libcoche"]
           (S[A"-cclib"; A"-lcoche"]);
         flag ["link"; "program"; "ocaml"; "byte"; "use_libcoche"]
-          (S[A"-dllib"; A"-lcoche"]);
+          (S[A"-I"; A"lib"; A"-dllib"; A"-lcoche"]);
         dep  ["link"; "ocaml"; "use_libcoche"] ["lib/libcoche.a"];
 
     | _ -> ()

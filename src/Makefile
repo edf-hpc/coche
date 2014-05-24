@@ -34,12 +34,11 @@ endif
 CLASSIC := $(if $(INSIDE_EMACS), -classic-display)
 ARCH := $(if $(HAS_OPT),native,byte)
 OCAMLBUILD := ocamlbuild$(CLASSIC)$(if $(HAS_OPT),, -byte-plugin)
-OCAMLBUILD_ENV := OCAMLFIND_COMMANDS='ocamlc=jocamlc ocamlopt=jocamlopt ocamldep=jocamldep'
 
 # Build
-TARGETS := lib/coche.cma
+TARGETS := cocheLib.cma
 ifeq ($(ARCH),native)
-TARGETS += lib/coche.cmxa
+TARGETS += cocheLib.cmxa
 endif
 TARGETS += $(NAME).$(ARCH)
 
@@ -52,11 +51,11 @@ BINDIR := $(DESTDIR)$(PREFIX)/bin
 all: build
 
 build:
-	$(OCAMLBUILD_ENV) $(OCAMLBUILD) $(TARGETS)
+	$(OCAMLBUILD) $(TARGETS)
 
 clean:
 	$(OCAMLBUILD) -clean
 
 headers:
 	headache -r -h _header Makefile \
-		$(wildcard *.ml lib/*.ml lib/*.mli lib/*.mly lib/*.mll)
+		$(filter-out lib/cocheArg.ml lib/cocheArg.mli,$(wildcard *.ml lib/*.ml lib/*.mli lib/*.mly lib/*.mll))

@@ -20,30 +20,31 @@
 
 module Arg = CocheArg
 
-let usage_msg = Printf.sprintf "%s subcommand [options]\n%s"
-  (Filename.basename Sys.argv.(0))
-  (Subcommand.help ())
+type t = {
+  name: string;
+  description: string;
+  main: unit -> unit;
+  spec: (Arg.key * Arg.spec * Arg.doc) list
+}
 
-let spec = ref (
-  Arg.align [
-    "-verbose", Arg.Set Flags.verbose, " Enable verbose mode";
-  ])
+let subcommands = ref []
+let selected_sc = ref (None : t option)
 
-let () = Arg.parse_dynamic
-  spec
-  (fun arg ->
-    if !Arg.current = 1 then begin
-      try
-        let sc = Subcommand.get_by_name (String.lowercase arg) in
-        Subcommand.selected_sc := Some sc;
-        spec := !spec @ sc.Subcommand.spec
-      with Not_found ->
-        raise (Arg.Bad ("unknown subcommand " ^ arg))
-    end
-  )
-  usage_msg
+let register s =
+  subcommands := (s.name, s) :: !subcommands
 
-let main =
-  match !Subcommand.selected_sc with
-    | None -> Arg.usage !spec usage_msg
-    | Some sc -> sc.Subcommand.main ()
+let help () =
+  let buffer = Buffer.create 1024 in
+  Buffer.add_string buffer "Available subcommands:\n";
+  List.iter (fun (name,sc) ->
+    let temp = Printf.sprintf "  %s\t\t%s\n" name sc.description in
+    Buffer.add_string buffer temp
+    )
+    !subcommands;
+  Buffer.add_string buffer "Available options:";
+  let contents = Buffer.contents buffer in
+  Buffer.reset buffer;
+  contents
+
+let get_by_name s =
+  List.assoc s !subcommands
