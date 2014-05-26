@@ -85,19 +85,19 @@ let () =
         dep ["coche"; "native"] & cmx_subcommands;
 
         (* cocheLib *)
-        flag ["ocaml"; "link"; "byte"; "use_cochelib"] & A"cocheLib.cma";
-        flag ["ocaml"; "link"; "native"; "use_cochelib"] & A"cocheLib.cmxa";
+        flag ["ocaml"; "link"; "byte"; "use_cocheLib"] & A"cocheLib.cma";
+        flag ["ocaml"; "link"; "native"; "use_cocheLib"] & A"cocheLib.cmxa";
 
         (* C stubs *)
+        dep  ["link"; "library"; "ocaml"; "use_libcoche"] ["lib/libcoche.a"];
         flag ["link"; "library"; "ocaml"; "byte"; "use_libcoche"]
           (S[A"-dllib"; A"-lcoche"; A"-cclib"; A"-lcoche"]);
         flag ["link"; "library"; "ocaml"; "native"; "use_libcoche"]
           (S[A"-cclib"; A"-lcoche"]);
-        flag ["link"; "library"; "ocaml"; "native"; "use_libcoche"]
-          (S[A"-cclib"; A"-lcoche"]);
         flag ["link"; "program"; "ocaml"; "byte"; "use_libcoche"]
           (S[A"-I"; A"lib"; A"-dllib"; A"-lcoche"]);
-        dep  ["link"; "ocaml"; "use_libcoche"] ["lib/libcoche.a"];
+        flag ["link"; "program"; "ocaml"; "native"; "use_libcoche"]
+          (S[A"-I"; A"lib"]);
 
     | _ -> ()
   end
