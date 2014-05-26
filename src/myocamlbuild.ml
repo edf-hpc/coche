@@ -52,11 +52,11 @@ let subcommands =
   let cmds = Array.to_list (Sys.readdir "subcommands") in
   List.map (fun subcommand -> "subcommands/" ^ (Filename.chop_extension subcommand)) cmds
 
-let cmx_subcommands =
-  List.map (fun subcommand -> subcommand ^ ".cmx") subcommands
+let subcommands ext = List.map (fun subcommand -> subcommand ^ ext) subcommands
 
-let cmo_subcommands =
-  List.map (fun subcommand -> subcommand ^ ".cmo") subcommands
+let cmx_subcommands = subcommands ".cmx"
+let cmo_subcommands = subcommands ".cmo"
+let ml_subcommands  = subcommands ".ml"
 
 let () =
   dispatch begin function
@@ -80,6 +80,7 @@ let () =
         flag ["ocamlmklib"; "c"] (S[A "-lutil"]);
 
         (* subcommands *)
+        dep ["coche_src"] & ml_subcommands;
         dep ["coche"; "byte"] & cmo_subcommands;
         dep ["coche"; "native"] & cmx_subcommands;
 
