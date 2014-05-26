@@ -66,7 +66,6 @@ let () =
         Options.ocamlopt := ocamlfind "ocamlopt";
         Options.ocamldep := ocamlfind "ocamldep";
         Options.ocamldoc := ocamlfind "ocamldoc";
-        Options.ocamlmklib := ocamlfind "ocamlmklib";
 
     | After_rules ->
         flag ["ocaml"; "link"; "program"] & A"-linkpkg";
@@ -83,10 +82,11 @@ let () =
         dep ["coche_src"] & ml_subcommands;
         dep ["coche"; "byte"] & cmo_subcommands;
         dep ["coche"; "native"] & cmx_subcommands;
+        flag ["ocaml"; "compile"; "subcommands"] (S[A"-I"; A"lib"]);
 
         (* cocheLib *)
-        flag ["ocaml"; "link"; "byte"; "use_cocheLib"] & A"cocheLib.cma";
-        flag ["ocaml"; "link"; "native"; "use_cocheLib"] & A"cocheLib.cmxa";
+        use_lib "coche" "cocheLib";
+        flag ["coche"; "compile"] (S[A"-I"; A"lib"]);
 
         (* C stubs *)
         dep  ["link"; "library"; "ocaml"; "use_libcoche"] ["lib/libcoche.a"];
