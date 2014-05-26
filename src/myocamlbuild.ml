@@ -21,7 +21,7 @@
 open Printf
 open Ocamlbuild_plugin
 
-let name = "ben"
+let name = "coche"
 let packages = [
   "unix";
   "extlib";
