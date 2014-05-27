@@ -85,6 +85,8 @@ let () =
         flag ["ocaml"; "compile"; "subcommands"] (S[A"-I"; A"lib"]);
 
         (* cocheLib *)
+        flag ["ocaml"; "link"; "byte"; "use_cocheLib"] & A"cocheLib.cma";
+        flag ["ocaml"; "link"; "native"; "use_cocheLib"] & A"cocheLib.cmxa";
         use_lib "coche" "cocheLib";
         flag ["coche"; "compile"] (S[A"-I"; A"lib"]);
 
