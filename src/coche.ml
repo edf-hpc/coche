@@ -36,7 +36,7 @@ let () = Arg.parse_dynamic
       try
         let sc = Subcommand.get_by_name (String.lowercase arg) in
         Subcommand.selected_sc := Some sc;
-        spec := !spec @ sc.Subcommand.spec
+        spec := Arg.align (!spec @ sc.Subcommand.spec)
       with Not_found ->
         raise (Arg.Bad ("unknown subcommand " ^ arg))
     end
