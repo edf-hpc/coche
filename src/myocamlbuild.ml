@@ -56,7 +56,6 @@ let subcommands ext = List.map (fun subcommand -> subcommand ^ ext) subcommands
 
 let cmx_subcommands = subcommands ".cmx"
 let cmo_subcommands = subcommands ".cmo"
-let ml_subcommands  = subcommands ".ml"
 
 let () =
   dispatch begin function
@@ -79,7 +78,6 @@ let () =
         flag ["ocamlmklib"; "c"] (S[A "-lutil"]);
 
         (* subcommands *)
-        dep ["coche_src"] & ml_subcommands;
         dep ["coche"; "byte"] & cmo_subcommands;
         dep ["coche"; "native"] & cmx_subcommands;
         flag ["ocaml"; "compile"; "subcommands"] (S[A"-I"; A"lib"]);
