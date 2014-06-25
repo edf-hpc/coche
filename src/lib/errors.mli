@@ -49,6 +49,7 @@ type error =
     | File_not_readable_or_not_found of string
     | Forkpty_failed of Unix.error
     | Authentification_failed of string
+    | Lost_connection of string
     | Unix of Unix.error
 
 exception Error of error
