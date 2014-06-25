@@ -27,6 +27,7 @@ let packages = [
   "extlib";
   "xmlm";
   "pcre";
+  "functory";
 ]
 
 exception Require_findlib
