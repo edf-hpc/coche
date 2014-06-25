@@ -81,6 +81,9 @@ let write_msg fd msg =
 
 let rec interact fdTerm host password =
   let first_msg = read_msg fdTerm in
+  if ExtString.String.exists first_msg "lost connection" then
+    raise (Lost_connection host)
+  else
   let msg =
     if Pcre.pmatch ~rex:authenticityRx first_msg then begin
       write_msg fdTerm "yes";
