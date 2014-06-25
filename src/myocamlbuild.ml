@@ -97,7 +97,7 @@ let () =
         flag ["link"; "program"; "ocaml"; "byte"; "use_libcoche"]
           (S[A"-I"; A"lib"; A"-dllib"; A"-lcoche"]);
         flag ["link"; "program"; "ocaml"; "native"; "use_libcoche"]
-          (S[A"-I"; A"lib"]);
+          (S[A"-I"; A"lib"; A"-cclib"; A"-lutil"]);
 
     | _ -> ()
   end
