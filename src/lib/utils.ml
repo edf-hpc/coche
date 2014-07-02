@@ -19,3 +19,5 @@
 (****************************************************************************)
 
 let ($) f g = g f
+
+external processors_count : unit -> int = "nb_processors"
