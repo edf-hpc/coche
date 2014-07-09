@@ -28,13 +28,13 @@ let forkpty() = try Some (c_forkpty ()) with Unix.Unix_error _ -> None
    controlling terminal for the new process.  If successful, a file
    descriptor for the master end of the controlling terminal is
    returned. *)
-let create_session cmd args =
+let create_session env cmd args =
   match forkpty () with
   | None ->
       raise (Errors.Forkpty_failed (Unix.EUNKNOWNERR 0))
   | Some (0, _) ->
       begin try
-        Unix.execvp cmd args (* never returns *)
+        Unix.execvpe cmd args env (* never returns *)
       with Unix.Unix_error (error, _, _) ->
         raise (Errors.Forkpty_failed error)
      end
@@ -115,29 +115,35 @@ let rec interact fdTerm host password =
     let () = Buffer.add_string buffer msg in
     read_all buffer fdTerm
 
-let run host password cmd args =
-  match fst (create_session cmd args) with
+let run env host password cmd args =
+  match fst (create_session env cmd args) with
   | Some fdTerm ->
     interact fdTerm host password
   | None ->
     assert false (* create_session nevers returns None *)
 
 let common_args host =
+  let env = [|
+    Printf.sprintf "%s=%s" "SSH_AGENT_PID" (Unix.getenv "SSH_AGENT_PID");
+    Printf.sprintf "%s=%s" "SSH_AUTH_SOCK" (Unix.getenv "SSH_AUTH_SOCK");
+	    |] in
   [| "-e none";
      "-o ConnectTimeout=1";
      "-o ConnectionAttempts=1";
      "-q";
      host;
-  |]
+  |], env
 
 let ssh host password command =
-  let args = Array.append (common_args host) command in
-  run host password "ssh" args
+  let common_args, env = common_args host in
+  let args = Array.append common_args command in
+  run env host password "ssh" args
 
 let scp host password files destination =
+  let common_args, env = common_args "-r" in
   let args = Array.concat
-    [ common_args "-r";
+    [ common_args;
       files;
       [| Printf.sprintf "%s:%s" host destination |]
     ] in
-  run host password "scp" args
+  run env host password "scp" args
