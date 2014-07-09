@@ -67,14 +67,18 @@ let rec read_all buf fd =
     final
 
 let read_msg fd =
-  let buffer = String.create buf_size in
-  let len = Unix.read fd buffer 0 buf_size in
-  if len <= 0 then
-    raise (Errors.Unix Unix.EBADF)
-  else begin
-    let s = String.sub buffer 0 len in
-    s
-  end
+  try
+    let buffer = String.create buf_size in
+    let len = Unix.read fd buffer 0 buf_size in
+    if len <= 0 then
+      raise (Errors.Unix Unix.EBADF)
+    else begin
+      let s = String.sub buffer 0 len in
+      s
+    end
+  with
+    | Unix.Unix_error (_,"read","") -> ""
+    | Unix.Unix_error (e,_,_) -> raise (Errors.Unix e)
 
 let write_msg fd msg =
   ignore (Unix.write fd (msg ^ "\n") 0 (String.length msg + 1))
