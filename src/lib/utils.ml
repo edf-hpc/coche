@@ -21,3 +21,17 @@
 let ($) f g = g f
 
 external processors_count : unit -> int = "nb_processors"
+
+let read_process command =
+  let in_channel = Unix.open_process_in command in
+  let out = Std.input_all in_channel in
+  ignore (Unix.close_process_in in_channel);
+  out
+
+let read_process_lines command =
+  let in_channel = Unix.open_process_in command in
+  let out = Std.input_list in_channel in
+  ignore (Unix.close_process_in in_channel);
+  out
+
+let hostname = read_process "hostname"
