@@ -83,7 +83,7 @@ let read_msg fd =
 let write_msg fd msg =
   ignore (Unix.write fd (msg ^ "\n") 0 (String.length msg + 1))
 
-let rec interact fdTerm host password =
+let rec interact fdTerm host password input =
   let first_msg = read_msg fdTerm in
   if ExtString.String.exists first_msg "lost connection" then
     raise (Lost_connection host)
@@ -115,14 +115,18 @@ let rec interact fdTerm host password =
   if Pcre.pmatch ~rex:passwordRx msg || Pcre.pmatch ~rex:passphraseRx msg then
     raise (Errors.Authentification_failed host)
   else
+    let () = match input with
+      | Some input -> write_msg fdTerm input
+      | None -> ()
+    in
     let buffer = Buffer.create buf_size in
     let () = Buffer.add_string buffer msg in
     read_all buffer fdTerm
 
-let run env host password cmd args =
+let run env host password cmd args input =
   match fst (create_session env cmd args) with
   | Some fdTerm ->
-    interact fdTerm host password
+    interact fdTerm host password input
   | None ->
     assert false (* create_session nevers returns None *)
 
@@ -141,7 +145,7 @@ let common_args host =
 let ssh host password command =
   let common_args, env = common_args host in
   let args = Array.append common_args command in
-  run env host password "ssh" args
+  run env host password "ssh" args None
 
 let scp host password files destination =
   let common_args, env = common_args "-r" in
@@ -150,4 +154,4 @@ let scp host password files destination =
       files;
       [| Printf.sprintf "%s:%s" host destination |]
     ] in
-  run env host password "scp" args
+  run env host password "scp" args None
