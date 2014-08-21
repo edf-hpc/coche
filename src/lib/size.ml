@@ -30,7 +30,7 @@ type t = {
 let value s =
   s.size *. s.multiplier *. s.unit
 
-let rex = Pcre.regexp "^(\\d+(\\.\\d{0,2})?)\\h*([kMGTPEZY]?i?[bB])$"
+let rex = Pcre.regexp "^(\\d+(\\.\\d{0,2})?)\\h*([kMGTPEZY]?i?[bBo]?)$"
 
 let seq b e =
   let rec seq b e =
@@ -82,9 +82,9 @@ let make n =
       let unit = substrings.(3) in
       let size, multiplier, base, unit =
         match String.length unit with
-          | 1 -> floor size, 1., true, (if unit.[0] = 'B' then 8. else 1.)
-          | 2 -> size, multiplier_of_char unit.[0] true, true, (if unit.[1] = 'B' then 8. else 1.)
-          | 3 -> size, multiplier_of_char unit.[0] false, false, (if unit.[2] = 'B' then 8. else 1.)
+          | 1 -> floor size, 1., true, (if unit.[0] = 'B' || unit.[0] = 'o' then 8. else 1.)
+          | 2 -> size, multiplier_of_char unit.[0] true, true, (if unit.[1] = 'B'|| unit.[1] = 'o' then 8. else 1.)
+          | 3 -> size, multiplier_of_char unit.[0] false, false, (if unit.[2] = 'B'|| unit.[2] = 'o' then 8. else 1.)
           | _ -> assert false
       in
       { size = size; multiplier = multiplier; base10 = base; unit = unit }
