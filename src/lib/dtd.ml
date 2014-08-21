@@ -162,11 +162,13 @@ and kernel = {
   k_arch: string option;
 }
 
-and file = {
+and 'a file_t = {
   f_name: string;
   f_owner: string option;
   f_group: string option;
-  f_same: bool;
+  f_same: 'a;
   f_perms: Unix.file_perm option;
   f_type: Unix.file_kind;
 }
+
+and file = bool file_t
