@@ -51,6 +51,8 @@ type error =
     | Authentification_failed of string
     | Lost_connection of string
     | Unix of Unix.error
+    | Cannot_merge_two_different_tags of string
+    | Cannot_merge_two_different_reports of string
 
 exception Error of error
 
