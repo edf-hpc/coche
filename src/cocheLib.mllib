@@ -8,3 +8,6 @@ lib/Terminal
 lib/CocheArg
 lib/Flags
 lib/Subcommand
+lib/Query
+lib/Result
+lib/Report
