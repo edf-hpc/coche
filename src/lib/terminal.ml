@@ -152,6 +152,6 @@ let scp host password files destination =
   let args = Array.concat
     [ common_args;
       files;
-      [| Printf.sprintf "%s:%s" host destination |]
+      [| destination |]
     ] in
   run env host password "scp" args None
