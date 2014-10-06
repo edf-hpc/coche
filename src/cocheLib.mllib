@@ -2,12 +2,10 @@ lib/Errors
 lib/Network
 lib/Units
 lib/Utils
-lib/Dtd
+lib/Ast
 lib/Xml
 lib/Terminal
 lib/CocheArg
 lib/Flags
 lib/Subcommand
 lib/Query
-lib/Result
-lib/Report

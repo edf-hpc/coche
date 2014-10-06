@@ -18,6 +18,8 @@
 (*                                                                          *)
 (****************************************************************************)
 
+open Ast
+open Ast.Base
 open Dtd
 open Utils
 open Errors
@@ -390,7 +392,8 @@ let rec read_nodes nodes input =
           else `Subset
         in
         let packages = read_packages [] input $ List.flatten $ ExtList.List.unique in
-        let nodes = Packages { p_status = p_status; p_match = p_match; p_list = packages }
+        let packages = List.map (fun p -> p, p_status) packages in
+        let nodes = Packages { p_status = packages; p_match = p_match }
           :: nodes in
         pop input;
         read_nodes nodes input

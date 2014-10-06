@@ -18,22 +18,22 @@
 (*                                                                          *)
 (****************************************************************************)
 
-val q_packages : Dtd.packages -> Result.packages
-val q_daemon : Dtd.daemon -> Result.daemon
-val q_mount : Dtd.mount -> Result.mount
-val q_netconfig : Dtd.netconfig -> Result.netconfig
-val q_memory : Dtd.memory -> Result.memory
-val q_disk : Dtd.disk -> Result.disk
-val q_cpu : Dtd.cpu -> Result.cpu
-val q_system : Dtd.system -> Result.system
-val q_file : Dtd.file -> Result.file
+val q_packages : Ast.Dtd.packages -> Ast.Result.packages
+val q_daemon : Ast.Dtd.daemon -> Ast.Result.daemon
+val q_mount : Ast.Dtd.mount -> Ast.Result.mount
+val q_netconfig : Ast.Dtd.netconfig -> Ast.Result.netconfig
+val q_memory : Ast.Dtd.memory -> Ast.Result.memory
+val q_disk : Ast.Dtd.disk -> Ast.Result.disk
+val q_cpu : Ast.Dtd.cpu -> Ast.Result.cpu
+val q_system : Ast.Dtd.system -> Ast.Result.system
+val q_file : Ast.Dtd.file -> Ast.Result.file
 
-val cluster_to_result : Dtd.cluster -> Result.t
+val cluster_to_result : Ast.Dtd.cluster -> Ast.Result.t
 val merge_results:
-  'a Report.result ->
-  'a Report.result ->
-  'a Report.result
+  'a Ast.Report.info ->
+  'a Ast.Report.info ->
+  'a Ast.Report.info
 
-val result_to_report : Result.t -> Report.t
-val merge_reports : Report.t -> Report.t -> Report.t
-val print_report : Report.t -> unit
+val result_to_report : Ast.Result.t -> Ast.Report.t
+val merge_reports : Ast.Report.t -> Ast.Report.t -> Ast.Report.t
+val print_report : Ast.Report.t -> unit
