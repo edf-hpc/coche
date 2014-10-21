@@ -31,6 +31,7 @@ type error =
     | Invalid_network_description of string
     | Invalid_IP_address_description of string
     | Invalid_IP_range_description of string
+    | XML_file_not_specified
     | XML_file_not_DTD_compliant of string
     | Class_not_found of string
     | Area_not_found of string
@@ -79,6 +80,8 @@ let string_of_error = function
     sprintf "Invalid IP range description: %s" s
   | Invalid_network_description s ->
     sprintf "Invalid network description: %s" s
+  | XML_file_not_specified ->
+    sprintf "An XML file must be specified"
   | XML_file_not_DTD_compliant s ->
     sprintf "XML file %s is not DTD compliant" s
   | Class_not_found s ->

@@ -31,6 +31,7 @@ type error =
     | Invalid_network_description of string
     | Invalid_IP_address_description of string
     | Invalid_IP_range_description of string
+    | XML_file_not_specified
     | XML_file_not_DTD_compliant of string
     | Class_not_found of string
     | Area_not_found of string
