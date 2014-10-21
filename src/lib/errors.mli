@@ -61,3 +61,4 @@ val string_of_error : error -> string
 
 val raise : error -> 'a
 val warn : error -> unit
+val exit : error -> 'a

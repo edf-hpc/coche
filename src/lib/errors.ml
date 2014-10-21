@@ -148,6 +148,10 @@ let report flag fmt args =
 let warn e =
   report "W" "%s" (string_of_error e)
 
+let exit e =
+  report "E" "%s" (string_of_error e);
+  exit 127
+
 let () =
   Printexc.register_printer
     (function
