@@ -24,10 +24,16 @@ open Dtd
 open Utils
 open Errors
 
-let dtd_file = "coche.dtd"
+let dtd_file = ref "/usr/share/coche/coche.dtd"
 let xml_file = ref "coche.xml"
 
 let validate xml_file =
+  let dtd_file =
+    if Sys.file_exists !dtd_file then
+      !dtd_file
+    else
+      Filename.concat (Filename.dirname xml_file) "coche.dtd"
+  in
   let command = Printf.sprintf
     "xmllint --nonet --valid --dtdvalid %s %s 2>&1 >/dev/null"
     dtd_file
