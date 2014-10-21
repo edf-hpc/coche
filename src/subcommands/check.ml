@@ -22,7 +22,6 @@ open Query
 open Functory.Cores
 module Arg = CocheArg
 
-let name = "check"
 let xml_file = ref None
 let debug = ref false
 let worker = ref false
@@ -163,7 +162,7 @@ let main () =
     Query.print_report !resultat_final
 
 let () = Subcommand.register {
-  Subcommand.name = name;
+  Subcommand.name = "check";
   Subcommand.description = "Read an XML file and run specified tests";
   Subcommand.main = main;
   Subcommand.spec = spec;
