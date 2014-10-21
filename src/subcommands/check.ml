@@ -29,19 +29,19 @@ let nproc = ref (Utils.processors_count ())
 let config = ref ""
 let master_pwd = ref ""
 let master_destination = ref ""
-let resultat_final = ref []
+let reports = ref []
 
 let set_debug () =
   debug := true;
   Functory.Control.set_debug true
 
-let set_xml f =
+let set_dtd f =
   if Sys.file_exists f
-  then xml_file := Some f
-  else raise (Arg.Bad "Specified XML file doesn't exist")
+  then Xml.dtd_file := f
+  else raise (Arg.Bad "Specified DTD file doesn't exist")
 
 let spec = [
-  "-xml", Arg.String set_xml, " Set XML file";
+  "-dtd", Arg.String set_dtd, " Set DTD file";
   "-debug", Arg.Unit set_debug, " Enable debug mode";
   "-nproc", Arg.Set_int nproc, " Specify how many cores to use";
   "-worker", Arg.Set worker, " Enable worker mode";
@@ -51,15 +51,28 @@ let () =
   set_number_of_cores !nproc
 
 let tmp_name suffix =
-  let name = Filename.temp_file "coche." suffix in
+  let name = Filename.temp_file "Coche_" suffix in
   Unix.unlink name;
   name
 
 let tmp_binary_name = tmp_name ".exe"
-let tmp_report_name = tmp_name (Utils.hostname ^ ".reports" )
-let tmp_xml_name = tmp_name ".xml"
 
-let send_file (password,host) file1 file2 =
+let stable_tmp_name suffix =
+  let prefix =
+    if !worker then
+      Sys.argv.(0)
+    else
+      tmp_binary_name
+  in
+  (Filename.chop_extension prefix) ^ suffix
+
+let tmp_report_name = stable_tmp_name ".report"
+let tmp_cluster_name = stable_tmp_name ".cluster"
+
+let report_filename host =
+  Printf.sprintf "%s_%s" tmp_report_name host
+
+let send_file (password, host) file1 file2 =
   let _ =
     try
       Terminal.scp
@@ -75,10 +88,10 @@ let send_file (password,host) file1 file2 =
 	""
   in ()
 
-let send_coche (password,host) file2 =
-  send_file (password,host) Sys.argv.(0) file2
+let send_coche (password, host) file2 =
+  send_file (password, host) Sys.argv.(0) file2
 
-let get_remote_file (password,host) file1 file2 =
+let get_remote_file (password, host) file1 file2 =
   let _ =
     try
       Terminal.scp
@@ -102,9 +115,7 @@ let launch_worker (password, host) =
 	password
 	[|tmp_binary_name;
 	  "check";
-	  "-worker";
-          "-xml";
-	 "/tmp/"^tmp_xml_name
+	  "-worker"
 	|]
     end
     with
@@ -115,51 +126,65 @@ let launch_worker (password, host) =
 	""
   in ()
 
-(*
- * fonction worker
- *)
-
 let f_worker (password, host) =
-  send_coche (password,host) tmp_binary_name ;
-  let _ = match !xml_file with
-    | Some elm ->
-      send_file (password,host) elm tmp_xml_name
-    | None -> assert false
-  in
-  launch_worker(password, host);
-  get_remote_file (password,host)
-    ("/tmp/"^tmp_report_name)
-    ("/tmp/"^tmp_report_name^"_"^host)
+  send_coche (password, host) tmp_binary_name;
+  send_coche (password, host) tmp_cluster_name;
+  launch_worker (password, host);
+  get_remote_file (password, host)
+    tmp_report_name
+    (report_filename host)
 
-let host = ["", "localhost"]
-let host = List.map (fun a ->
-  a,(None : string option)) host
-
-let master ((password,host),dest) _ =
-  let f_in = open_in (tmp_report_name^"_"^host) in
-  let f_read = input_value f_in  in
-  close_in f_in;
-  resultat_final := merge_reports !resultat_final f_read;
+let master ((password, host), dest) _ =
+  let partial_report = Utils.with_in_file (report_filename host) input_value in
+  reports := partial_report :: !reports;
   []
 
 let main () =
   if !worker then
     begin
-      let cluster_dtd =
-	match !xml_file with
-	  | Some elm -> Xml.read elm
-	  | None -> assert false
-      in
-      let result_cluster = Query.cluster_to_result cluster_dtd in
-      let report_cluster = Query.result_to_report result_cluster in
-      let f_out = open_out tmp_report_name in
-      let () = output_value f_out report_cluster in
-      let () =  close_out f_out in
-      ()
+      let cluster = Utils.with_in_file tmp_cluster_name input_value in
+      let result = Query.cluster_to_result cluster in
+      let report = Query.result_to_report result in
+      Utils.with_out_file tmp_report_name (fun fd -> output_value fd report)
     end
   else
-    let () = compute ~worker:f_worker ~master host in
-    Query.print_report !resultat_final
+    (* Read XML file *)
+    let cluster =
+      match !xml_file with
+      | Some file when Sys.file_exists file ->
+        Xml.read file
+      | Some file ->
+        Errors.exit (Errors.File_not_readable_or_not_found file)
+      | None ->
+        Errors.exit Errors.XML_file_not_specified
+    in
+    try
+      let netclass =
+        List.find
+          (fun c -> c.Ast.c_type = "default")
+          cluster.Ast.Dtd.classes
+      in
+      let hosts = Network.expand_hosts (netclass.Ast.c_default.Ast.a_hosts) in
+      begin match hosts with
+      | [] -> raise Not_found
+      | _ ->
+        let hosts = List.map (fun a -> ("", a), (None : string option)) hosts in
+        (* Write tmp_cluster_name *)
+        let () = Utils.with_out_file tmp_cluster_name (fun fd -> output_value fd cluster) in
+        (* Launch tests *)
+        let () = compute ~worker:f_worker ~master hosts in
+        (* Merge reports *)
+        let report =
+          match !reports with
+          | [] -> assert false
+          | [a] -> a
+          | a::l -> List.fold_left Query.merge_reports a l
+        in
+        (* Print report *)
+        Query.print_report report
+      end
+    with Not_found ->
+      Printf.eprintf "No hosts found."
 
 let () = Subcommand.register {
   Subcommand.name = "check";
