@@ -11,4 +11,5 @@ let () = Subcommand.register {
   Subcommand.description = "Compute hostlists and IP ranges operations";
   Subcommand.main = main;
   Subcommand.spec = spec;
+  Subcommand.anon = fun _ -> ();
 }

@@ -40,6 +40,9 @@ let () = Arg.parse_dynamic
       with Not_found ->
         raise (Arg.Bad ("unknown subcommand " ^ arg))
     end
+    else match !Subcommand.selected_sc with
+    | None -> ()
+    | Some sc -> sc.Subcommand.anon arg
   )
   usage_msg
 

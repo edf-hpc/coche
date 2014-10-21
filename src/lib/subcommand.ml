@@ -24,7 +24,8 @@ type t = {
   name: string;
   description: string;
   main: unit -> unit;
-  spec: (Arg.key * Arg.spec * Arg.doc) list
+  spec: (Arg.key * Arg.spec * Arg.doc) list;
+  anon: string -> unit;
 }
 
 let subcommands = ref []

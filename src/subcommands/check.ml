@@ -167,4 +167,5 @@ let () = Subcommand.register {
   Subcommand.description = "Read an XML file and run specified tests";
   Subcommand.main = main;
   Subcommand.spec = spec;
+  Subcommand.anon = (fun arg -> xml_file := Some arg);
 }
