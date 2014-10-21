@@ -47,6 +47,10 @@ let () = Arg.parse_dynamic
   usage_msg
 
 let main =
-  match !Subcommand.selected_sc with
-    | None -> Arg.usage !spec usage_msg
-    | Some sc -> sc.Subcommand.main ()
+  try
+    begin match !Subcommand.selected_sc with
+      | None -> Arg.usage !spec usage_msg
+      | Some sc -> sc.Subcommand.main ()
+    end
+  with Errors.Error e ->
+    Errors.exit e
