@@ -34,7 +34,7 @@ let validate xml_file =
     xml_file
   in
   match Unix.system command with
-    | Unix.WEXITED n ->
+    | Unix.WEXITED n when n <> 0 ->
         raise (XML_file_not_DTD_compliant xml_file)
     | _ -> ()
 
