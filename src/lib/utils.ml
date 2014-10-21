@@ -34,4 +34,18 @@ let read_process_lines command =
   ignore (Unix.close_process_in in_channel);
   out
 
+let with_in_file file f =
+  let chan = open_in_bin file in
+  try
+    let res = f chan in
+    close_in chan; res
+  with e -> close_in chan; raise e
+
+let with_out_file file f =
+  let chan = open_out_bin file in
+  try
+    let res = f chan in
+    close_out chan; res
+  with e -> close_out chan; raise e
+
 let hostname = read_process "hostname"
