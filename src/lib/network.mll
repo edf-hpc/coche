@@ -172,7 +172,7 @@ and read_hosts buff = parse
         if b = e
         then [e]
         else b::(aux (b+1) e)
-      in seq b e
+      in aux b e
     else
       seq e b
 
