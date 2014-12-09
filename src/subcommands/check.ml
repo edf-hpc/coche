@@ -22,11 +22,14 @@ open Query
 open Functory.Cores
 module Arg = CocheArg
 
+type response = Done of Ast.Report.t | Failed of string
+
 let xml_file = ref None
 let debug = ref false
 let worker = ref false
 let nproc = ref (Utils.processors_count ())
 let config = ref ""
+let tmp_cluster_file = ref ""
 let master_pwd = ref ""
 let master_destination = ref ""
 let reports = ref []
@@ -44,7 +47,8 @@ let spec = [
   "-dtd", Arg.String set_dtd, " Set DTD file";
   "-debug", Arg.Unit set_debug, " Enable debug mode";
   "-nproc", Arg.Set_int nproc, " Specify how many cores to use";
-  "-worker", Arg.Set worker, " Enable worker mode";
+  "-worker", Arg.Set worker, " (internal usage only)";
+  "-cluster", Arg.Set_string tmp_cluster_file, " (internal usage only)";
 ]
 
 let () =
@@ -115,7 +119,9 @@ let launch_worker (password, host) =
 	password
 	[|tmp_binary_name;
 	  "check";
-	  "-worker"
+	  "-worker";
+          "-cluster";
+          tmp_cluster_name ^ "." ^ host
 	|]
     end
     with
@@ -128,23 +134,34 @@ let launch_worker (password, host) =
 
 let f_worker (password, host) =
   send_coche (password, host) tmp_binary_name;
-  send_coche (password, host) tmp_cluster_name;
+  send_file (password, host) tmp_cluster_name (tmp_cluster_name ^ "." ^ host);
   launch_worker (password, host);
   get_remote_file (password, host)
-    tmp_report_name
+    (tmp_cluster_name ^ "." ^ host ^ ".report")
     (report_filename host)
 
 let master ((password, host), dest) _ =
-  let partial_report = Utils.with_in_file (report_filename host) input_value in
+  let partial_report =
+    try
+      let file = report_filename host in
+      if (Unix.stat file).Unix.st_size = 0 then
+        raise (Unix.Unix_error (Unix.ENOENT, "stat", file))
+      else
+        let report : Ast.Report.t = Utils.with_in_file file input_value in
+        Done report
+    with Unix.Unix_error (Unix.ENOENT, _, _) ->
+      Failed host
+  in
   reports := partial_report :: !reports;
   []
 
 let main () =
   if !worker then
     begin
-      let cluster = Utils.with_in_file tmp_cluster_name input_value in
+      let cluster = Utils.with_in_file !tmp_cluster_file input_value in
       let result = Query.cluster_to_result cluster in
       let report = Query.result_to_report result in
+      let tmp_report_name = !tmp_cluster_file ^ ".report" in
       Utils.with_out_file tmp_report_name (fun fd -> output_value fd report)
     end
   else
@@ -174,17 +191,37 @@ let main () =
         (* Launch tests *)
         let () = compute ~worker:f_worker ~master hosts in
         (* Merge reports *)
+        let good_reports, bad_hosts =
+          List.partition
+            (function Done _ -> true | Failed _ -> false)
+            !reports
+        in
+        let good_reports =
+          List.map
+            (function Done v -> v | Failed _ -> assert false)
+            good_reports
+        in
+        let _ =
+          List.iter
+            (function
+              | Done _ -> assert false
+              | Failed h -> Printf.printf "Bad host %s\n%!" h)
+            bad_hosts
+        in
         let report =
-          match !reports with
-          | [] -> assert false
+          match good_reports with
+          | [] -> raise Exit
           | [a] -> a
           | a::l -> List.fold_left Query.merge_reports a l
         in
         (* Print report *)
         Query.print_report report
       end
-    with Not_found ->
-      Printf.eprintf "No hosts found."
+    with
+    | Not_found ->
+       Printf.eprintf "No hosts found.\n%!"
+    | Exit ->
+       exit 0
 
 let () = Subcommand.register {
   Subcommand.name = "check";
