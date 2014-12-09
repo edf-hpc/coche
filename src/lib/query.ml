@@ -208,15 +208,17 @@ let q_netdevice netdevice =
  *)
 let  q_disk disk =
   let output_lines = read_process_lines "df -h -P 2>/dev/null | grep -E '(sd)'| awk '{print $1, $2}'" in
-  let elem = List.find (fun s -> contains s disk.device) output_lines in
-  let elem = (ExtString.String.strip elem) in
-  let siz = (Units.Size.make (List.nth (ExtString.String.nsplit " " elem) 1)) in
-  match disk.size with
+  try
+    let elem = List.find (fun s -> contains s disk.device) output_lines in
+    let elem = (ExtString.String.strip elem) in
+    let siz = (Units.Size.make (List.nth (ExtString.String.nsplit " " elem) 1)) in
+    match disk.size with
     | Some size ->
-      if (Units.Size.compare siz size) = 0
-      then ok disk
-      else fail ({device = disk.device ; size = Some siz}, disk)
+       if (Units.Size.compare siz size) = 0
+       then ok disk
+       else fail ({device = disk.device ; size = Some siz}, disk)
     | None -> ok disk
+  with Not_found -> fail ({device = disk.device ; size = Some (Units.Size.make "0")}, disk)
 
 
 (*
