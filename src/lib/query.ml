@@ -252,8 +252,8 @@ let  q_cpu cpu =
   let maxf = (Units.Freq.make((ExtString.String.strip maxf)^"MHz")) in
   let core = read_process "cat /proc/cpuinfo | grep 'cpu cores' | awk '{s+=$4} END {print s}'" in
   let core = (int_of_string (ExtString.String.strip core)) in
-  let socket = read_process "lscpu |grep 'CPU socket(s)'| awk '{ print $3}'" in
-  let socket = (((int_of_string (ExtString.String.strip socket))*cpu1)) in
+  let socket = read_process "grep 'physical id' /proc/cpuinfo | sort -ru | awk '{print $4}'" in
+  let socket = (((1 + int_of_string (ExtString.String.strip socket))*cpu1)) in
   let thread = read_process "lscpu |grep 'Thread(s) per core'| awk '{ print $4}'" in
   let thread = (((int_of_string (ExtString.String.strip thread))*core)) in
   match cpu.maxfreq with
