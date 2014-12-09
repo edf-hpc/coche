@@ -225,20 +225,20 @@ let  q_disk disk =
  * Memoire
  *)
 let q_memory memory =
-  let mem  = read_process "top -n 1 -b -p 1 | grep Mem | awk '{ print $2 }'" in
-  let ex_mem = read_process "top -n 1 -b -p 1 | grep Swap | awk '{ print $2 }'" in
+  let mem  = read_process "sed -n 's/MemTotal:[ ]*//p' /proc/meminfo" in
+  let swap = read_process "sed -n 's/SwapTotal:[ ]*//p' /proc/meminfo" in
   let mem = (Units.Size.make mem) in
-  let ex_mem = (Units.Size.make ex_mem) in
-  let mem_rslt = {swap = Some ex_mem ; ram = Some mem } in
+  let swap = (Units.Size.make swap) in
+  let mem_rslt = {swap = Some swap ; ram = Some mem } in
   match memory.swap, memory.ram  with
-    | Some swap,Some ram -> if (Units.Size.compare swap ex_mem) = 0 && (Units.Size.compare ram mem) = 0
+    | Some m_swap, Some ram -> if (Units.Size.compare m_swap swap) = 0 && (Units.Size.compare ram mem) = 0
       then ok memory
       else fail (mem_rslt, memory)
     | None, None  ->  ok memory
     | None, Some ram ->  if (Units.Size.compare ram mem) = 0
       then ok memory
       else fail (mem_rslt, memory)
-    | Some swap , None ->  if (Units.Size.compare swap ex_mem) = 0
+    | Some m_swap, None ->  if (Units.Size.compare m_swap swap) = 0
       then ok memory
       else fail (mem_rslt, memory)
 
