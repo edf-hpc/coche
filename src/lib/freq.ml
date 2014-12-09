@@ -28,7 +28,7 @@ type t = {
 let value s =
   s.size *. s.multiplier
 
-let rex = Pcre.regexp "^(\\d+(\\.\\d{0,2})?)\\h*(da|[hkMGTPEZY])?Hz$"
+let rex = Pcre.regexp "^(\\d+(\\.\\d{0,3})?)\\h*(da|[hkMGTPEZY])?Hz$"
 
 let seq b e =
   let rec seq b e =
