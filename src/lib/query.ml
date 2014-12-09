@@ -186,15 +186,18 @@ let q_netdevice netdevice =
       `Down
   in
   let reslt = read_process ("/sbin/ifconfig "^nom^"|grep 'inet '| awk  '{print $2 }'") in
-  let adres = Network.ip (String.sub reslt 4 ((String.length reslt)-4)) in
-  let l = Network.expand_range(netdevice.Dtd.nd_target.Ast.a_range) in
   let st =
-  if Network.compare adres (Network.ip (List.nth l 0)) > 0
-    && Network.compare adres (Network.ip (List.nth (List.rev l) 0)) < 0
-    && state = netdevice.Dtd.nd_state
-  then
-    ok netdevice.Dtd.nd_state
-  else fail (state, netdevice.Dtd.nd_state)
+    try
+      let adres = Network.ip (String.sub reslt 4 ((String.length reslt)-4)) in
+      let l = Network.expand_range(netdevice.Dtd.nd_target.Ast.a_range) in
+      if Network.compare adres (Network.ip (List.nth l 0)) > 0
+         && Network.compare adres (Network.ip (List.nth (List.rev l) 0)) < 0
+         && state = netdevice.Dtd.nd_state
+      then
+        ok netdevice.Dtd.nd_state
+      else fail (state, netdevice.Dtd.nd_state)
+    with Invalid_argument "String.sub" ->
+      fail (state, netdevice.Dtd.nd_state)
   in
   {Result.nd_name = nom ;
    nd_target = netdevice.Dtd.nd_target;
