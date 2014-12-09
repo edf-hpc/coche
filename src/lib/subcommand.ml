@@ -22,6 +22,7 @@ module Arg = CocheArg
 
 type t = {
   name: string;
+  usage: string;
   description: string;
   main: unit -> unit;
   spec: (Arg.key * Arg.spec * Arg.doc) list;
@@ -38,7 +39,7 @@ let help () =
   let buffer = Buffer.create 1024 in
   Buffer.add_string buffer "Available subcommands:\n";
   List.iter (fun (name,sc) ->
-    let temp = Printf.sprintf "  %s\t\t%s\n" name sc.description in
+    let temp = Printf.sprintf "  %s %s\t\t%s\n" name sc.usage sc.description in
     Buffer.add_string buffer temp
     )
     !subcommands;

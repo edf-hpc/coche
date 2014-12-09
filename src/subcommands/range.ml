@@ -1,13 +1,12 @@
 module Arg = CocheArg
 
-let name = "range"
-
 let spec = []
 
 let main () = ()
 
 let () = Subcommand.register {
-  Subcommand.name = name;
+  Subcommand.name = "range";
+  Subcommand.usage = "[options] host_expr";
   Subcommand.description = "Compute hostlists and IP ranges operations";
   Subcommand.main = main;
   Subcommand.spec = spec;

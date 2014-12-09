@@ -188,6 +188,7 @@ let main () =
 
 let () = Subcommand.register {
   Subcommand.name = "check";
+  Subcommand.usage = "[options] xml_file";
   Subcommand.description = "Read an XML file and run specified tests";
   Subcommand.main = main;
   Subcommand.spec = spec;
