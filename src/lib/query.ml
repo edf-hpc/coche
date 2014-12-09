@@ -636,84 +636,75 @@ let merge_reports cluster1 cluster2 =
  * Print report function
  * let print_report r =
  *)
-let print_element elm  =
-  if List.length elm.Ast.Report_info.good > 0
-  then
-    begin
-      Printf.printf "Good values : [";
-      let () = List.iter (fun elm -> (Printf.printf "%s; " elm)) elm.Ast.Report_info.good in
-      Printf.printf "]";
-    end
-  else
-    if List.length elm.Ast.Report_info.bad > 0
-    then
-      begin
-	Printf.printf "Bad values : [";
-	List.iter
-	  ( fun (a, elm) ->
-	    Printf.printf "[";
-	    List.iter
-	      (fun elm1 ->
-		Printf.printf "%s; " elm1
-	      ) elm ;
-	    Printf.printf "]"
-	  ) elm.Ast.Report_info.bad;
-	Printf.printf "]";
-      end
-    else ()
+let print_element name elm =
+  Printf.printf "Test %s:\n" name;
 
+  let _ =
+    if List.length elm.Ast.Report_info.good > 0 then
+      Printf.printf "  Good hosts : %s\n" (String.concat ", " elm.Ast.Report_info.good)
+  in
+  let _ =
+    if List.length elm.Ast.Report_info.bad > 0 then
+      begin
+        Printf.printf "  Bad hosts :\n";
+        List.iter
+	  (fun (a, elm) -> Printf.printf "    %s" (String.concat ", " elm))
+          elm.Ast.Report_info.bad;
+      end
+  in
+  ()
 
  (*
  *packages
  *)
 let print_packages packages =
-  print_element packages.Report.p_status;
-  print_element packages.Report.p_match
+  print_element "Packages(status)" packages.Report.p_status;
+  print_element "Packages(match)" packages.Report.p_match
 
 (*
  *file
  *)
 let print_file file =
-  print_element file
+  print_element "File" file
 
 (*
  * netdevice
  *)
 let print_netdevice netdevice =
-print_element netdevice.Report.nd_state
+  print_element "Netdevice" netdevice.Report.nd_state
 
 (*
  *system
  *)
 let print_system system =
-  Printf.printf "value :%s " system.Report.sys_name ;
-  List.iter ( fun elm -> print_element elm ) system.Report.sys_config
+  Printf.printf "Test systemz: %s\n" system.Report.sys_name ;
+  List.iter ( fun elm -> print_element "System configuration" elm ) system.Report.sys_config
 
 (*
  * r_config
  *)
 let print_hardware_desc hardware_desc =
   match hardware_desc with
-    | Report.Memory memory -> print_element memory
-    | Report.Disk disk -> print_element disk
-    | Report.Cpu cpu -> print_element cpu
+    | Report.Memory memory -> print_element "Memory" memory
+    | Report.Disk disk -> print_element "Disk" disk
+    | Report.Cpu cpu -> print_element "CPU" cpu
 
 let print_hardware hardware =
-  Printf.printf "value :%s " hardware.Report.h_name ;
+  Printf.printf "Test Hardwarez: %s\n" hardware.Report.h_name ;
   List.iter print_hardware_desc hardware.Report.h_desc
 
 let print_node_desc node_desc =
   match node_desc with
     | Report.Mount mount ->
-      (print_element mount)
+      print_element "Mount" mount
     | Report.Daemon daemon ->
-      (print_element daemon)
+      print_element "Daemon" daemon
     | Report.Packages packages ->
-      (print_packages packages)
+      print_packages packages
     | Report.System system ->
-      (print_system system)
+      print_system system
     | Report.File file ->
-      (print_file file)
+      print_file file
 
 let print_node node =
   List.iter print_node_desc node.Report.n_desc
@@ -723,7 +714,7 @@ let print_service service =
 
 let print_netconfig netconfig =
   List.iter print_netdevice netconfig.Report.nc_devices;
-  print_element netconfig.Report.nc_kind
+  print_element "Netconfig" netconfig.Report.nc_kind
 
 let print_report config =
   List.iter
