@@ -159,7 +159,7 @@ let main () =
   if !worker then
     begin
       let cluster = Utils.with_in_file !tmp_cluster_file input_value in
-      let result = Query.cluster_to_result cluster in
+      let result = Query.run cluster in
       let report = Query.result_to_report result in
       let tmp_report_name = !tmp_cluster_file ^ ".report" in
       Utils.with_out_file tmp_report_name (fun fd -> output_value fd report)

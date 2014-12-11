@@ -348,7 +348,7 @@ let q_netconfig netconfig =
     nc_kind = kind;
     nc_devices = list_conf}
 
-let cluster_to_result cluster =
+let run cluster =
   List.map
     (fun config ->
       match config with

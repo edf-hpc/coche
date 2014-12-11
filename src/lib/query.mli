@@ -28,7 +28,7 @@ val q_cpu : Ast.Dtd.cpu -> Ast.Result.cpu
 val q_system : Ast.Dtd.system -> Ast.Result.system
 val q_file : Ast.Dtd.file -> Ast.Result.file
 
-val cluster_to_result : Ast.Dtd.cluster -> Ast.Result.t
+val run : Ast.Dtd.cluster -> Ast.Result.t
 val merge_report_info :
   'a Ast.Report.info ->
   'a Ast.Report.info ->
