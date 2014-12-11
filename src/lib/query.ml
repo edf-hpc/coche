@@ -480,13 +480,13 @@ let result_to_report cluster =
 
 (*
  * merge of two results :
- * merge_results:
+ * merge_report_info:
  * 'a Report.result ->
  * 'a Report.result ->
  * 'a Report.result
  *)
 
-let merge_results r1 r2 =
+let merge_report_info r1 r2 =
   let good = r1.Ast.Report_info.good @ r2.Ast.Report_info.good in
   let bad =
     List.fold_left
@@ -511,8 +511,8 @@ let merge_results r1 r2 =
  * packages
  *)
 let mr_packages packages1 packages2 =
-  let p_status = merge_results packages1.Report.p_status packages2.Report.p_status  in
-  let p_match = merge_results packages1.Report.p_match packages2.Report.p_match  in
+  let p_status = merge_report_info packages1.Report.p_status packages2.Report.p_status  in
+  let p_match = merge_report_info packages1.Report.p_match packages2.Report.p_match  in
   { Report.p_status = p_status;
     Report.p_match = p_match}
 
@@ -520,13 +520,13 @@ let mr_packages packages1 packages2 =
  * file
  *)
 let mr_file file1 file2 =
-  merge_results file1 file2
+  merge_report_info file1 file2
 
 (*
  * netdevice
  *)
 let mr_netdevice netdevice1 netdevice2 =
-  let state = merge_results netdevice1.Report.nd_state netdevice1.Report.nd_state   in
+  let state = merge_report_info netdevice1.Report.nd_state netdevice1.Report.nd_state   in
   { Report.nd_name = netdevice1.Report.nd_name;
     Report.nd_target = netdevice1.Report.nd_target;
     Report.nd_state = state
@@ -538,7 +538,7 @@ let mr_netdevice netdevice1 netdevice2 =
 let mr_system system1 system2 =
   let list = List.map2
     (fun elm1 elm2->
-      merge_results elm1 elm2
+      merge_report_info elm1 elm2
     )
     system1.Report.sys_config
     system2.Report.sys_config
@@ -553,11 +553,11 @@ let mr_system system1 system2 =
 let mr_hardware_desc hardware_desc1 hardware_desc2 =
   match hardware_desc1 ,hardware_desc2  with
     | Report.Memory memory1, Report.Memory memory2 ->
-      Report.Memory (merge_results memory1 memory2)
+      Report.Memory (merge_report_info memory1 memory2)
     | Report.Disk disk1, Report.Disk disk2 ->
-      Report.Disk (merge_results disk1 disk2)
+      Report.Disk (merge_report_info disk1 disk2)
     | Report.Cpu cpu1, Report.Cpu cpu2 ->
-      Report.Cpu (merge_results cpu1 cpu2)
+      Report.Cpu (merge_report_info cpu1 cpu2)
     | _ -> Errors.raise (Errors.Cannot_merge_two_different_tags "hardware")
 
 let mr_hardware hardware1 hardware2 =
@@ -572,9 +572,9 @@ let mr_hardware hardware1 hardware2 =
 let mr_node_desc node_desc1 node_desc2 =
   match node_desc1, node_desc2 with
     | Report.Mount mount1, Report.Mount mount2->
-      Report.Mount (merge_results mount1 mount2)
+      Report.Mount (merge_report_info mount1 mount2)
     | Report.Daemon daemon1, Report.Daemon daemon2 ->
-      Report.Daemon (merge_results daemon1 daemon2)
+      Report.Daemon (merge_report_info daemon1 daemon2)
     | Report.Packages packages1, Report.Packages packages2->
       Report.Packages (mr_packages packages1 packages2)
     | Report.System system1, Report.System system2->
@@ -598,7 +598,7 @@ let mr_service service1 service2 =
   }
 let mr_netconfig netconfig1 netconfig2=
   let list_conf = List.map2 mr_netdevice netconfig1.Report.nc_devices netconfig2.Report.nc_devices in
-  let kind = merge_results netconfig1.Report.nc_kind netconfig2.Report.nc_kind
+  let kind = merge_report_info netconfig1.Report.nc_kind netconfig2.Report.nc_kind
   in
   { Report.nc_name = netconfig1.Report.nc_name;
     Report.nc_classes = netconfig1.Report.nc_classes;
