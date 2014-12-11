@@ -22,7 +22,7 @@ open Query
 open Functory.Cores
 module Arg = CocheArg
 
-type response = Done of Ast.Report.t | Failed of string
+type response = Done of Report.t | Failed of string
 
 let xml_file = ref None
 let debug = ref false
@@ -147,7 +147,7 @@ let master ((password, host), dest) _ =
       if (Unix.stat file).Unix.st_size = 0 then
         raise (Unix.Unix_error (Unix.ENOENT, "stat", file))
       else
-        let report : Ast.Report.t = Utils.with_in_file file input_value in
+        let report : Report.t = Utils.with_in_file file input_value in
         Done report
     with Unix.Unix_error (Unix.ENOENT, _, _) ->
       Failed host
@@ -160,7 +160,7 @@ let main () =
     begin
       let cluster = Utils.with_in_file !tmp_cluster_file input_value in
       let result = Query.run cluster in
-      let report = Query.result_to_report result in
+      let report = Report.make result in
       let tmp_report_name = !tmp_cluster_file ^ ".report" in
       Utils.with_out_file tmp_report_name (fun fd -> output_value fd report)
     end
@@ -212,10 +212,10 @@ let main () =
           match good_reports with
           | [] -> raise Exit
           | [a] -> a
-          | a::l -> List.fold_left Query.merge_reports a l
+          | a::l -> List.fold_left Report.merge a l
         in
         (* Print report *)
-        Query.print_report report
+        Report.print report
       end
     with
     | Not_found ->

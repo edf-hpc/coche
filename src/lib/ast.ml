@@ -207,15 +207,3 @@ module Result_info = struct
 end
 
 module Result = Make(Result_info)
-
-module Report_info = struct
-    type 'a t = {
-      value: 'a;
-      good: string list;
-      bad: ('a * string list) list
-    }
-    type file_info = Digest.t
-    let compare = Pervasives.compare
-end
-
-module Report = Make(Report_info)

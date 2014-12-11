@@ -18,14 +18,8 @@
 (*                                                                          *)
 (****************************************************************************)
 
-val q_packages : Ast.Dtd.packages -> Ast.Result.packages
-val q_daemon : Ast.Dtd.daemon -> Ast.Result.daemon
-val q_mount : Ast.Dtd.mount -> Ast.Result.mount
-val q_netconfig : Ast.Dtd.netconfig -> Ast.Result.netconfig
-val q_memory : Ast.Dtd.memory -> Ast.Result.memory
-val q_disk : Ast.Dtd.disk -> Ast.Result.disk
-val q_cpu : Ast.Dtd.cpu -> Ast.Result.cpu
-val q_system : Ast.Dtd.system -> Ast.Result.system
-val q_file : Ast.Dtd.file -> Ast.Result.file
+type t
 
-val run : Ast.Dtd.cluster -> Ast.Result.t
+val make : Ast.Result.t -> t
+val merge : t -> t -> t
+val print : t -> unit
