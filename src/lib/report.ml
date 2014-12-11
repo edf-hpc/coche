@@ -311,94 +311,98 @@ let merge cluster1 cluster2 =
  * Print report function
  * let print_report r =
  *)
-let print_element name elm =
-  Printf.printf "Test %s:\n" name;
+let print_element fmt name elm =
+  Format.fprintf fmt "@[<v 2>Test %s@ " name;
+
+  let fold_hosts h = Network.string_of_hosts (Network.fold_hosts h) in
 
   let _ =
     if List.length elm.M_info.good > 0 then
-      Printf.printf "  Good hosts : %s\n" (String.concat ", " elm.M_info.good)
+      Format.fprintf fmt "@[<hv 2>Good:@ %s@]@;" (fold_hosts elm.M_info.good)
   in
   let _ =
     if List.length elm.M_info.bad > 0 then
       begin
-        Printf.printf "  Bad hosts :\n";
+        Format.fprintf fmt "@[<hv 2>Bad:@ @;";
         List.iter
-	  (fun (a, elm) -> Printf.printf "    %s" (String.concat ", " elm))
+	  (fun (a, elm) -> Format.fprintf fmt "@[<hv 2>%s@]@;" (fold_hosts elm))
           elm.M_info.bad;
+        Format.fprintf fmt "@]";
       end
   in
-  ()
+  Format.fprintf fmt "@]@;<2 0>"
 
  (*
  *packages
  *)
-let print_packages packages =
-  print_element "Packages(status)" packages.M.p_status;
-  print_element "Packages(match)" packages.M.p_match
+let print_packages fmt packages =
+  print_element fmt "Packages(status)" packages.M.p_status;
+  print_element fmt "Packages(match)" packages.M.p_match
 
 (*
  *file
  *)
-let print_file file =
-  print_element "File" file
-
-(*
- * netdevice
- *)
-let print_netdevice netdevice =
-  print_element "Netdevice" netdevice.M.nd_state
+let print_file fmt file =
+  print_element fmt "File" file
 
 (*
  *system
  *)
-let print_system system =
-  Printf.printf "Test systemz: %s\n" system.M.sys_name ;
-  List.iter ( fun elm -> print_element "System configuration" elm ) system.M.sys_config
+let print_system fmt system =
+  Format.fprintf fmt "@[<hv 2>System tests (%s):@ @;" system.M.sys_name;
+  List.iter (print_element fmt "Kernel") system.M.sys_config;
+  Format.fprintf fmt "@]@;<2 0>"
 
 (*
  * r_config
  *)
-let print_hardware_desc hardware_desc =
+let print_hardware_desc fmt hardware_desc =
   match hardware_desc with
-    | M.Memory memory -> print_element "Memory" memory
-    | M.Disk disk -> print_element "Disk" disk
-    | M.Cpu cpu -> print_element "CPU" cpu
+    | M.Memory memory -> print_element fmt "Memory" memory
+    | M.Disk disk -> print_element fmt "Disk" disk
+    | M.Cpu cpu -> print_element fmt "CPU" cpu
 
-let print_hardware hardware =
-  Printf.printf "Test Hardwarez: %s\n" hardware.M.h_name ;
-  List.iter print_hardware_desc hardware.M.h_desc
+let print_hardware fmt hardware =
+  Format.fprintf fmt "@[<hv 2>Hardware tests (%s):@;" hardware.M.h_name;
+  List.iter (print_hardware_desc fmt) hardware.M.h_desc;
+  Format.fprintf fmt "@]@;<2 0>"
 
-let print_node_desc node_desc =
+let print_node_desc fmt node_desc =
   match node_desc with
     | M.Mount mount ->
-      print_element "Mount" mount
+      print_element fmt "Mount" mount
     | M.Daemon daemon ->
-      print_element "Daemon" daemon
+      print_element fmt "Daemon" daemon
     | M.Packages packages ->
-      print_packages packages
+      print_packages fmt packages
     | M.System system ->
-      print_system system
+      print_system fmt system
     | M.File file ->
-      print_file file
+      print_file fmt file
 
-let print_node node =
-  List.iter print_node_desc node.M.n_desc
+let print_node fmt node =
+  List.iter (print_node_desc fmt) node.M.n_desc
 
-let print_service service =
-  List.iter print_node service.M.s_nodes
+let print_service fmt service =
+  List.iter (print_node fmt) service.M.s_nodes
 
-let print_netconfig netconfig =
-  List.iter print_netdevice netconfig.M.nc_devices;
-  print_element "Netconfig" netconfig.M.nc_kind
+let print_netconfig fmt netconfig =
+  Format.fprintf fmt "@[<hv 2>Netconfig (%s):@;" netconfig.M.nc_name;
+  print_element fmt "Kind" netconfig.M.nc_kind;
+  List.iter (fun netdevice -> print_element fmt "Netdevice" netdevice.M.nd_state) netconfig.M.nc_devices;
+  Format.fprintf fmt "@]@;<2 0>"
 
-let print config =
+let print_report fmt config =
   List.iter
     (fun config ->
       match config with
 	| M.Netconfig netconfig ->
-	  (print_netconfig netconfig)
+	  print_netconfig fmt netconfig
 	| M.Hardware hardware ->
-	  (print_hardware hardware)
+	  print_hardware fmt hardware
 	| M.Service service ->
-	  (print_service service)
-    ) config
+	  print_service fmt service
+    ) config;
+  Format.pp_print_flush fmt ()
+
+let print = print_report Format.std_formatter
