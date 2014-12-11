@@ -70,7 +70,7 @@
 
   let string_of_hosts h =
     let l = List.map string_of_hosts_elt h in
-    ExtString.String.join "," l
+    ExtString.String.join seq_sep l
 
   let string_of_prefix = string_of_int
   let string_of_ipv4 (a,b,c,d) = Printf.sprintf "%d.%d.%d.%d" a b c d
@@ -328,6 +328,14 @@ and read_hosts buff = parse
     (* WARNING: We do not remove duplicates intentionally! *)
     let h = List.flatten (List.map (expand_hosts_elt [""]) h) in
     List.sort compare_ipv4 h
+
+  let fold_hosts h =
+    let h = String.concat seq_sep h in
+    (* FIXME: This is temporary until coche gains the ability to natively
+       fold a list of hosts
+     *)
+    let folded = Utils.read_process (Printf.sprintf "nodeset -f %s" h) in
+    hosts (ExtString.String.strip folded)
 
   let expand_ip_range r =
     List.map ip (expand_range r)

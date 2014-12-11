@@ -48,6 +48,8 @@ val expand_range : range -> string list
 val expand_hosts : hosts -> string list
 val expand_ip_range : range -> ipv4 list
 
+val fold_hosts : string list -> hosts
+
 val block_of_cidr : cidr -> ipv4 * ipv4
 val block_of_range : range -> (ipv4 * ipv4) list
 
