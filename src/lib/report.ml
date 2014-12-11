@@ -18,10 +18,6 @@
 (*                                                                          *)
 (****************************************************************************)
 
-(*
- * Report creation, starting from the results
- *)
-
 open Utils
 open Ast
 
@@ -39,9 +35,6 @@ module M = Ast.Make(M_info)
 
 type t = M.t
           
-(*
- * recupération du hostname
- *)
 let hostname = read_process "hostname"
 
 let r_result = function
@@ -56,24 +49,15 @@ let r_result = function
       M_info.bad = (elm, hostname::[])::[]
     }
 
-(*
- * packages
- *)
 let r_packages packages =
   let p_status = r_result packages.Result.p_status in
   let p_match = r_result packages.Result.p_match in
   { M.p_status = p_status;
     M.p_match = p_match}
 
-(*
- * file
- *)
 let r_file file =
   r_result file
 
-(*
- * netdevice
- *)
 let r_netdevice netdevice =
   let state = r_result netdevice.Result.nd_state in
   { M.nd_name = netdevice.Result.nd_name;
@@ -81,9 +65,6 @@ let r_netdevice netdevice =
     M.nd_state = state
   }
 
-(*
- * system
- *)
 let r_system system =
   let list = List.map
     (fun elm ->
@@ -94,9 +75,6 @@ let r_system system =
     M.sys_config = list
   }
 
-(*
- * r_config
- *)
 let r_hardware_desc hardware_desc =
   match hardware_desc with
     | Result.Memory memory -> M.Memory (r_result memory)
@@ -153,14 +131,6 @@ let make cluster =
     )
     cluster
 
-(*
- * merge of two results :
- * merge_report_info:
- * 'a M.result ->
- * 'a M.result ->
- * 'a M.result
- *)
-
 let merge_report_info r1 r2 =
   let good = r1.M_info.good @ r2.M_info.good in
   let bad =
@@ -182,24 +152,15 @@ let merge_report_info r1 r2 =
     M_info.bad = bad;
   }
 
-(*
- * packages
- *)
 let mr_packages packages1 packages2 =
   let p_status = merge_report_info packages1.M.p_status packages2.M.p_status  in
   let p_match = merge_report_info packages1.M.p_match packages2.M.p_match  in
   { M.p_status = p_status;
     M.p_match = p_match}
 
-(*
- * file
- *)
 let mr_file file1 file2 =
   merge_report_info file1 file2
 
-(*
- * netdevice
- *)
 let mr_netdevice netdevice1 netdevice2 =
   let state = merge_report_info netdevice1.M.nd_state netdevice1.M.nd_state   in
   { M.nd_name = netdevice1.M.nd_name;
@@ -207,9 +168,6 @@ let mr_netdevice netdevice1 netdevice2 =
     M.nd_state = state
   }
 
-(*
- * system
- *)
 let mr_system system1 system2 =
   let list = List.map2
     (fun elm1 elm2->
@@ -222,9 +180,6 @@ let mr_system system1 system2 =
     M.sys_config = list
   }
 
-(*
- * config
- *)
 let mr_hardware_desc hardware_desc1 hardware_desc2 =
   match hardware_desc1 ,hardware_desc2  with
     | M.Memory memory1, M.Memory memory2 ->
@@ -281,14 +236,6 @@ let mr_netconfig netconfig1 netconfig2=
     M.nc_devices = list_conf
   }
 
-(*
- * merge of two report :
- * merge:
- * M.t ->
- * M.t ->
- * M.t
- *)
-
 let merge cluster1 cluster2 =
   try
     List.map2 (fun elm1 elm2 ->
@@ -307,10 +254,11 @@ let merge cluster1 cluster2 =
       cluster2
   with Invalid_argument e ->
     Errors.raise (Errors.Cannot_merge_two_different_reports "merge_reports")
+
 (*
- * Print report function
- * let print_report r =
+ * Printing functions
  *)
+
 let print_element fmt name elm =
   Format.fprintf fmt "@[<v 2>Test %s@ " name;
 
@@ -332,30 +280,18 @@ let print_element fmt name elm =
   in
   Format.fprintf fmt "@]@;<2 0>"
 
- (*
- *packages
- *)
 let print_packages fmt packages =
   print_element fmt "Packages(status)" packages.M.p_status;
   print_element fmt "Packages(match)" packages.M.p_match
 
-(*
- *file
- *)
 let print_file fmt file =
   print_element fmt "File" file
 
-(*
- *system
- *)
 let print_system fmt system =
   Format.fprintf fmt "@[<hv 2>System tests (%s):@ @;" system.M.sys_name;
   List.iter (print_element fmt "Kernel") system.M.sys_config;
   Format.fprintf fmt "@]@;<2 0>"
 
-(*
- * r_config
- *)
 let print_hardware_desc fmt hardware_desc =
   match hardware_desc with
     | M.Memory memory -> print_element fmt "Memory" memory

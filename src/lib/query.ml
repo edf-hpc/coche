@@ -36,9 +36,6 @@ let fail (t1,t2) = Ast.Result_info.Fail (t1,t2)
 
 module SMap = Map.Make(String)
 
-(*
- * packages
- *)
 let q_packages packages =
   let output_lines = read_process_lines "dpkg -l| egrep -v '[|\\/]' | grep -v '+-='| awk '{ print $1,$2 }'" in
   let nb_packages = List.length output_lines in
@@ -95,9 +92,6 @@ let q_packages packages =
     p_match = result_match;
   }
 
-(*
- * extraction des résultats pour le daemon
- *)
 let q_daemon daemon =
   let demon = daemon.d_name in
   let out  = read_process("/etc/init.d/"^demon^" status") in
@@ -115,9 +109,6 @@ let q_daemon daemon =
     let r_daemon = {d_name = demon; d_status = status }in
     fail (r_daemon, daemon)
 
-(*
- * mount
- *)
 let q_mount mount =
   let output_lines = read_process_lines "mount | awk '{ print $1,$3,$4,$5 }'" in
   let elem = List.find (fun s -> contains s mount.m_name) output_lines in
@@ -138,9 +129,6 @@ let q_mount mount =
             m_quota = mount.m_quota},
           mount)
 
-(*
- * fichier
- *)
 let q_file : (Dtd.file ->  Result.file) = fun file ->
   let file_name = file.f_name in
   let siz = Unix.stat file.f_name in
@@ -171,9 +159,6 @@ let q_file : (Dtd.file ->  Result.file) = fun file ->
   else
     fail (file_r, file_o)
 
- (*
-  * netdevice
-  *)
 let q_netdevice netdevice =
   let nom = netdevice.Dtd.nd_name in
   let out = read_process ("/sbin/ifconfig "^nom)in
@@ -202,9 +187,6 @@ let q_netdevice netdevice =
    nd_target = netdevice.Dtd.nd_target;
    nd_state = st }
 
-(*
- *disk
- *)
 let  q_disk disk =
   let output_lines = read_process_lines "df -h -P 2>/dev/null | grep -E '(sd)'| awk '{print $1, $2}'" in
   try
@@ -220,9 +202,6 @@ let  q_disk disk =
   with Not_found -> fail ({device = disk.device ; size = Some (Units.Size.make "0")}, disk)
 
 
-(*
- * Memoire
- *)
 let q_memory memory =
   let mem  = read_process "sed -n 's/MemTotal:[ ]*//p' /proc/meminfo" in
   let swap = read_process "sed -n 's/SwapTotal:[ ]*//p' /proc/meminfo" in
@@ -241,9 +220,6 @@ let q_memory memory =
       then ok memory
       else fail (mem_rslt, memory)
 
-(*
- *cpu
- *)
 let  q_cpu cpu =
   let cpu1  = read_process "egrep -c '^processor' /proc/cpuinfo" in
   let cpu1 = (int_of_string (ExtString.String.strip cpu1)) in
@@ -272,9 +248,6 @@ let  q_cpu cpu =
     | None -> ok cpu
 
 
-(*
- * system
- *)
 let q_sysconfig sysconfig =
   let vers = read_process "uname -r " in
   let arch = read_process "uname -m"  in
@@ -301,9 +274,6 @@ let q_system system =
     list_sys_conf in
   {Result.sys_name = syname ; Result.sys_config = lst }
 
-(*
- * Construction de q_config
- *)
 let q_hardware_desc hardware_desc =
   match hardware_desc with
     |Dtd.Memory memory -> Memory (q_memory memory)
