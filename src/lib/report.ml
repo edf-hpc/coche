@@ -266,7 +266,7 @@ let print_element fmt name elm =
 
   let _ =
     if List.length elm.M_info.good > 0 then
-      Format.fprintf fmt "@[<hv 2>Good:@ %s@]@;" (fold_hosts elm.M_info.good)
+      Format.fprintf fmt "@[<hv 2>Good:@ %s@]" (fold_hosts elm.M_info.good)
   in
   let _ =
     if List.length elm.M_info.bad > 0 then
