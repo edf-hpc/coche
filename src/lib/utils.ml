@@ -48,4 +48,10 @@ let with_out_file file f =
     close_out chan; res
   with e -> close_out chan; raise e
 
-let hostname = read_process "hostname"
+let set_hostname, get_hostname =
+  let my_h = ref None in
+  (fun h -> my_h := Some h),
+  (fun () -> match !my_h with
+             | None -> read_process "hostname"
+             | Some h -> h
+  )

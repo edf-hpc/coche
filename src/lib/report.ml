@@ -157,18 +157,16 @@ end
 
 type t = M.t
 
-let hostname = read_process "hostname"
-
 let r_result = function
   | Ast.Result_info.Ok elm ->
     { M_info.value = elm;
-      M_info.good = hostname::[];
+      M_info.good = (Utils.get_hostname ())::[];
       M_info.bad = []
     }
   | Ast.Result_info.Fail (elm, good) ->
     { M_info.value = good;
       M_info.good = [];
-      M_info.bad = (elm, hostname::[])::[]
+      M_info.bad = (elm, (Utils.get_hostname ())::[])::[]
     }
   | Ast.Result_info.Skip elm ->
     { M_info.value = elm;

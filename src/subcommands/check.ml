@@ -172,6 +172,7 @@ let main () =
   if !worker then
     begin
       let my_hostname = FilePath.get_extension !tmp_cluster_file in
+      let () = Utils.set_hostname my_hostname in
       let cluster = Utils.with_in_file !tmp_cluster_file input_value in
       let result = Query.run my_hostname cluster in
       let report = Report.make result in
