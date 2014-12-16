@@ -202,18 +202,17 @@ let q_file : (Dtd.file ->  Result.file) = fun file ->
     fail (file_r, file_o)
 
 let q_disk disk =
-  let output_lines = read_process_lines "df -h -P 2>/dev/null | grep -E '(sd)'| awk '{print $1, $2}'" in
+  let output = read_process (__ "lsblk -n -d %s 2>/dev/null | awk '{ print $4 }'" disk.device) in
+  let output = ExtString.String.strip output in
   try
-    let elem = List.find (fun s -> contains s disk.device) output_lines in
-    let elem = (ExtString.String.strip elem) in
-    let siz = (Units.Size.make (List.nth (ExtString.String.nsplit " " elem) 1)) in
+    let siz = Units.Size.make output in
     match disk.size with
     | Some size ->
-       if (Units.Size.compare siz size) = 0
+       if Units.Size.compare siz size = 0
        then ok disk
        else fail ({device = disk.device ; size = Some siz}, disk)
     | None -> ok disk
-  with Not_found -> fail ({device = disk.device ; size = Some (Units.Size.make "0")}, disk)
+  with _ -> fail ({device = disk.device ; size = None}, disk)
 
 let q_memory memory =
   let mem  = read_process "sed -n 's/MemTotal:[ ]*//p' /proc/meminfo" in

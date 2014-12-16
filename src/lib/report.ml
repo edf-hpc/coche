@@ -103,9 +103,9 @@ module P = struct
 
   let disk fmt d =
     Format.fprintf
-      fmt "%s %a"
+      fmt "%s%a"
       d.Ast.Base.device
-      (option Format.pp_print_string "") (option_map Units.Size.to_string d.Ast.Base.size)
+      (option Format.pp_print_string " ") (option_map Units.Size.to_string d.Ast.Base.size)
 
   let cpu fmt c =
     Format.fprintf
