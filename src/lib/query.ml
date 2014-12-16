@@ -28,6 +28,9 @@ open Utils
 open Result
 open Units
 
+(*
+ * General use functions
+ *)
 let contains s1 s2 =
   ExtString.String.exists s2 s1
 
@@ -42,6 +45,10 @@ let run_or_skip run f t =
     skip t
 
 module SMap = Map.Make(String)
+
+(*
+ * Services section
+ *)
 
 let q_packages packages =
   let output_lines = read_process_lines "dpkg -l| egrep -v '[|\\/]' | grep -v '+-='| awk '{ print $1,$2 }'" in
@@ -166,38 +173,6 @@ let q_file : (Dtd.file ->  Result.file) = fun file ->
   else
     fail (file_r, file_o)
 
-let q_netdevice should_run netdevice =
-  let nom = netdevice.Dtd.nd_name in
-  let st = if should_run then
-    begin
-      let out = read_process ("/sbin/ifconfig "^nom)in
-      let state =
-        if contains out "Up"
-        then
-          `Up
-        else
-          `Down
-      in
-      let reslt = read_process ("/sbin/ifconfig "^nom^"|grep 'inet '| awk  '{print $2 }'") in
-      try
-        let adres = Network.ip (String.sub reslt 4 ((String.length reslt)-4)) in
-        let l = Network.expand_range(netdevice.Dtd.nd_target.Ast.a_range) in
-        if Network.compare adres (Network.ip (List.nth l 0)) > 0
-           && Network.compare adres (Network.ip (List.nth (List.rev l) 0)) < 0
-           && state = netdevice.Dtd.nd_state
-        then
-          ok netdevice.Dtd.nd_state
-        else fail (state, netdevice.Dtd.nd_state)
-      with Invalid_argument "String.sub" ->
-        fail (state, netdevice.Dtd.nd_state)
-    end
-  else
-    skip netdevice.Dtd.nd_state
-  in
-  {Result.nd_name = nom ;
-   nd_target = netdevice.Dtd.nd_target;
-   nd_state = st }
-
 let q_disk disk =
   let output_lines = read_process_lines "df -h -P 2>/dev/null | grep -E '(sd)'| awk '{print $1, $2}'" in
   try
@@ -282,20 +257,6 @@ let q_system system =
     list_sys_conf in
   {Result.sys_name = syname ; Result.sys_config = lst }
 
-let q_hardware_desc run hardware_desc =
-  match hardware_desc with
-    |Dtd.Memory memory -> Memory (run_or_skip run q_memory memory)
-    |Dtd.Disk disk -> Disk (run_or_skip run q_disk disk)
-    |Dtd.Cpu cpu -> Cpu (run_or_skip run q_cpu cpu)
-
-let q_hardware in_classes hardware =
-  let should_run = in_classes hardware.Dtd.h_classes in
-  let name = hardware.Dtd.h_name in
-  let list_res= List.map (q_hardware_desc should_run) hardware.Dtd.h_desc in
-  { h_name = name;
-    h_desc = list_res;
-    h_classes = hardware.Dtd.h_classes }
-
 let q_node_desc node_desc =
     match node_desc with
       |Dtd.Mount mount ->  Mount (q_mount mount)
@@ -318,6 +279,42 @@ let q_service in_classes service =
   {s_name = service.Dtd.s_name;
    s_nodes = list_serv }
 
+(*
+ * Netconfig section
+ *)
+
+let q_netdevice should_run netdevice =
+  let nom = netdevice.Dtd.nd_name in
+  let st = if should_run then
+    begin
+      let out = read_process ("/sbin/ifconfig "^nom)in
+      let state =
+        if contains out "Up"
+        then
+          `Up
+        else
+          `Down
+      in
+      let reslt = read_process ("/sbin/ifconfig "^nom^"|grep 'inet '| awk  '{print $2 }'") in
+      try
+        let adres = Network.ip (String.sub reslt 4 ((String.length reslt)-4)) in
+        let l = Network.expand_range(netdevice.Dtd.nd_target.Ast.a_range) in
+        if Network.compare adres (Network.ip (List.nth l 0)) > 0
+           && Network.compare adres (Network.ip (List.nth (List.rev l) 0)) < 0
+           && state = netdevice.Dtd.nd_state
+        then
+          ok netdevice.Dtd.nd_state
+        else fail (state, netdevice.Dtd.nd_state)
+      with Invalid_argument "String.sub" ->
+        fail (state, netdevice.Dtd.nd_state)
+    end
+  else
+    skip netdevice.Dtd.nd_state
+  in
+  {Result.nd_name = nom ;
+   nd_target = netdevice.Dtd.nd_target;
+   nd_state = st }
+
 let q_netconfig in_classes netconfig =
   let should_run = in_classes netconfig.Dtd.nc_classes in
   let list_conf = List.map (q_netdevice should_run) netconfig.Dtd.nc_devices in
@@ -326,6 +323,28 @@ let q_netconfig in_classes netconfig =
     nc_classes = netconfig.Dtd.nc_classes;
     nc_kind = kind;
     nc_devices = list_conf}
+
+(*
+ * Hardware section
+ *)
+
+let q_hardware_desc run hardware_desc =
+  match hardware_desc with
+    |Dtd.Memory memory -> Memory (run_or_skip run q_memory memory)
+    |Dtd.Disk disk -> Disk (run_or_skip run q_disk disk)
+    |Dtd.Cpu cpu -> Cpu (run_or_skip run q_cpu cpu)
+
+let q_hardware in_classes hardware =
+  let should_run = in_classes hardware.Dtd.h_classes in
+  let name = hardware.Dtd.h_name in
+  let list_res= List.map (q_hardware_desc should_run) hardware.Dtd.h_desc in
+  { h_name = name;
+    h_desc = list_res;
+    h_classes = hardware.Dtd.h_classes }
+
+(*
+ * Main function of the module to run the entire set of tests.
+ *)
 
 let run my_hostname cluster =
   let in_class a_classname =
