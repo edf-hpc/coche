@@ -271,7 +271,7 @@ let q_netdevice should_run netdevice =
     begin
       let out = read_process (__ "/bin/ip link show dev %s" name)in
       let state =
-        if contains out " UP "
+        if contains out "state UP"
         then
           `Up
         else
