@@ -437,4 +437,8 @@ and read_hosts buff = parse
   let are_members range cidr =
     List.for_all (range_elt_is_member cidr) range
 
+  let is_host_member host hosts =
+    let hosts = expand_hosts hosts in
+    List.mem host hosts
+
 }
