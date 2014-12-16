@@ -220,17 +220,15 @@ let q_memory memory =
       then ok memory
       else fail (mem_rslt, memory)
 
-let  q_cpu cpu =
-  let cpu1  = read_process "egrep -c '^processor' /proc/cpuinfo" in
-  let cpu1 = (int_of_string (ExtString.String.strip cpu1)) in
-  let maxf  = read_process "lscpu |grep 'CPU MHz'| awk '{ print $3}'" in
+let q_cpu cpu =
+  let maxf  = read_process "lscpu | grep 'CPU max MHz' | cut -d: -f2 | sed 's/,/./'" in
   let maxf = (Units.Freq.make((ExtString.String.strip maxf)^"MHz")) in
-  let core = read_process "cat /proc/cpuinfo | grep 'cpu cores' | awk '{s+=$4} END {print s}'" in
-  let core = (int_of_string (ExtString.String.strip core)) in
-  let socket = read_process "grep 'physical id' /proc/cpuinfo | sort -ru | awk '{print $4}'" in
-  let socket = (((1 + int_of_string (ExtString.String.strip socket))*cpu1)) in
-  let thread = read_process "lscpu |grep 'Thread(s) per core'| awk '{ print $4}'" in
-  let thread = (((int_of_string (ExtString.String.strip thread))*core)) in
+  let core = read_process "lscpu | sed -n 's@Core(s) per socket:[ ]*@@p'" in
+  let core = int_of_string (ExtString.String.strip core) in
+  let socket = read_process "lscpu | sed -n 's@Socket(s):[ ]*@@p'" in
+  let socket = int_of_string (ExtString.String.strip socket) in
+  let thread = read_process "lscpu | sed -n 's@Thread(s) per core:[ ]*@@p'" in
+  let thread = int_of_string (ExtString.String.strip thread) in
   match cpu.maxfreq with
     |Some maxfreq ->
       if Units.Freq.compare maxfreq maxf = 0 &&
