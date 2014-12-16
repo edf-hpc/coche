@@ -387,27 +387,28 @@ let merge cluster1 cluster2 =
  *)
 
 let print_element fmt p name elm =
-  Format.fprintf fmt "@[<v 2>Test %s [%a]@ " name p elm.M_info.value;
+  Format.fprintf fmt "@[<v 2>\027[1;34mTest %s [\027[0;34m%a\027[1;34m]\027[0m@ " name p elm.M_info.value;
 
   let fold_hosts h = Network.string_of_hosts (Network.fold_hosts h) in
 
   let _ =
     if List.length elm.M_info.good > 0 then
-      Format.fprintf fmt "@[<hv 2>Good:@ %s@]" (fold_hosts elm.M_info.good)
+      Format.fprintf fmt "@[<hv 2>\027[1;32mGood:@ \027[0;32m%s\027[0m@]" (fold_hosts elm.M_info.good)
   in
   let _ =
     if List.length elm.M_info.bad > 0 then
       begin
-        Format.fprintf fmt "@[<hv 2>Bad:@ @;";
+        Format.fprintf fmt "@[<hv 2>\027[1;31mBad:\027[0;31m@ ";
+        Format.fprintf fmt "@[<hv 2>";
         List.iter
 	  (fun (a, elm) ->
              Format.fprintf
-               fmt "@[<hv 2>%s [%a]@]@;"
+               fmt "%s [%a]@;"
                (fold_hosts elm)
                p a
           )
           elm.M_info.bad;
-        Format.fprintf fmt "@]";
+        Format.fprintf fmt "@]@]\027[0m";
       end
   in
   Format.fprintf fmt "@]@;<2 0>"
@@ -431,7 +432,7 @@ let print_hardware_desc fmt hardware_desc =
     | M.Cpu cpu -> print_element fmt P.cpu "CPU" cpu
 
 let print_hardware fmt hardware =
-  Format.fprintf fmt "@[<hv 2>Hardware tests (%s):@;" hardware.M.h_name;
+  Format.fprintf fmt "@[<hv 2>\027[1;33mHardware tests (%s):\027[0m@;" hardware.M.h_name;
   List.iter (print_hardware_desc fmt) hardware.M.h_desc;
   Format.fprintf fmt "@]@;<2 0>"
 
@@ -452,10 +453,12 @@ let print_node fmt node =
   List.iter (print_node_desc fmt) node.M.n_desc
 
 let print_service fmt service =
-  List.iter (print_node fmt) service.M.s_nodes
+  Format.fprintf fmt "@[<hv 2>\027[1;33mService (%s):\027[0m@;" service.M.s_name;
+  List.iter (print_node fmt) service.M.s_nodes;
+  Format.fprintf fmt "@]@;<2 0>"
 
 let print_netconfig fmt netconfig =
-  Format.fprintf fmt "@[<hv 2>Netconfig (%s):@;" netconfig.M.nc_name;
+  Format.fprintf fmt "@[<hv 2>\027[1;33mNetconfig (%s):\027[0m@;" netconfig.M.nc_name;
   print_element fmt P.netconfig_kind "Kind" netconfig.M.nc_kind;
   List.iter
     (fun netdevice ->
