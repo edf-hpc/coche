@@ -52,61 +52,69 @@ let __ = Printf.sprintf
  * Services section
  *)
 
-let q_packages packages =
-  let output_lines = read_process_lines "dpkg -l | awk 'NR > 5 { print $1,$2 }'" in
-  let nb_packages = List.length output_lines in
-  let dpkg_l = List.fold_left
-    (fun map line ->
-      let status, package = match (ExtString.String.nsplit line " ") with
-	| status::package::_ -> status, package
-	| _ -> assert false
-      in
-      assert(String.length(status) > 0);
-      let status = if status.[0] = 'i' then `Installed else `Absent in
-      SMap.add package status map
-    )
-    SMap.empty
-    output_lines
-  in
-  let l_st = List.map
-    (fun (pkg, status) ->
-      try
-	let found = SMap.find pkg dpkg_l in
-	pkg, status, found
-      with Not_found ->
-	pkg, status, `Absent
-    )
-    packages.Dtd.p_status
-  in
-  let cond_status = List.for_all
-    (fun (pkg, status, found) -> status = found)
-    l_st
-  in
-  let cond_match =
-    if packages.Dtd.p_match = `Subset
-    then cond_status
-    else cond_status && nb_packages = List.length packages.Dtd.p_status
-  in
-  let result_status =
-    if cond_status
-    then ok packages.Dtd.p_status
-    else
-      let fail_l = List.fold_left
-	(fun acc elt ->
-	  let pkg, status, found = elt in
-	  if status <> found
-	  then (pkg,found)::acc
-	  else acc
-	)
-	[]
-	l_st
-      in
-      fail (fail_l, packages.Dtd.p_status) (* double fail *)
-  in
-  let result_match = if cond_match then ok packages.Dtd.p_match  else fail (`Subset, packages.Dtd.p_match) in
-  { p_status = result_status ;
-    p_match = result_match;
-  }
+let q_packages run packages =
+  if not run then
+    { p_status = skip packages.Dtd.p_status ;
+      p_match = skip packages.Dtd.p_match;
+    }
+  else
+    let output_lines = read_process_lines "dpkg -l | awk 'NR > 5 { print $1,$2 }'" in
+    let nb_packages = List.length output_lines in
+    let dpkg_l =
+      List.fold_left
+        (fun map line ->
+         let status, package = match (ExtString.String.nsplit line " ") with
+	   | status::package::_ -> status, package
+	   | _ -> assert false
+         in
+         assert(String.length(status) > 0);
+         let status = if status.[0] = 'i' then `Installed else `Absent in
+         SMap.add package status map
+        )
+        SMap.empty
+        output_lines
+    in
+    let l_st =
+      List.map
+        (fun (pkg, status) ->
+         try
+	   let found = SMap.find pkg dpkg_l in
+	   pkg, status, found
+         with Not_found ->
+	   pkg, status, `Absent
+        )
+        packages.Dtd.p_status
+    in
+    let cond_status = List.for_all
+                        (fun (pkg, status, found) -> status = found)
+                        l_st
+    in
+    let cond_match =
+      if packages.Dtd.p_match = `Subset
+      then cond_status
+      else cond_status && nb_packages = List.length packages.Dtd.p_status
+    in
+    let result_status =
+      if cond_status
+      then ok packages.Dtd.p_status
+      else
+        let fail_l =
+          List.fold_left
+	    (fun acc elt ->
+	     let pkg, status, found = elt in
+	     if status <> found
+	     then (pkg,found)::acc
+	     else acc
+	    )
+	    []
+	    l_st
+        in
+        fail (fail_l, packages.Dtd.p_status) (* double fail *)
+    in
+    let result_match = if cond_match then ok packages.Dtd.p_match  else fail (`Subset, packages.Dtd.p_match) in
+    { p_status = result_status ;
+      p_match = result_match;
+    }
 
 let q_daemon daemon =
   let demon = daemon.d_name in
@@ -171,35 +179,38 @@ let q_mount mount =
   with _ ->
        fail (failed, mount)
 
-let q_file : (Dtd.file ->  Result.file) = fun file ->
-  let file_name = file.f_name in
-  let siz = Unix.stat file.f_name in
-  let owner = getpwuid (siz.st_uid) in
-  let owner = owner.pw_name in
-  let group = getgrgid (siz.st_gid) in
-  let group = group.gr_name in
-  let kind = siz.st_kind in
-  let perm = siz.st_perm in
+let q_file run file =
   let file_o = {f_name = file.f_name;
-	   f_owner = file.f_owner;
-	   f_group = file.f_group;
-	   f_same = Digest.file "/dev/null";
-	   f_perms = file.f_perms;
-	   f_type = file.f_type } in
-  let file_r = {f_name = file.f_name;
-	   f_owner = Some owner;
-	   f_group = Some group;
-	   f_same = Digest.file file_name;
-	   f_perms = Some perm;
-	   f_type = kind } in
-  if (file.f_owner = Some owner &&
-      file.f_group = Some group &&
-      file.f_type = kind &&
-      file.f_perms = Some perm)
-  then
-    ok file_r
+	        f_owner = file.f_owner;
+	        f_group = file.f_group;
+	        f_same = Digest.file "/dev/null";
+	        f_perms = file.f_perms;
+	        f_type = file.f_type } in
+  if not run then
+    skip file_o
   else
-    fail (file_r, file_o)
+    let file_name = file.f_name in
+    let siz = Unix.stat file.f_name in
+    let owner = getpwuid (siz.st_uid) in
+    let owner = owner.pw_name in
+    let group = getgrgid (siz.st_gid) in
+    let group = group.gr_name in
+    let kind = siz.st_kind in
+    let perm = siz.st_perm in
+    let file_r = {f_name = file.f_name;
+	          f_owner = Some owner;
+	          f_group = Some group;
+	          f_same = Digest.file file_name;
+	          f_perms = Some perm;
+	          f_type = kind } in
+    if file.f_owner = Some owner
+       && file.f_group = Some group
+       && file.f_type = kind
+       && file.f_perms = Some perm
+    then
+      ok file_r
+    else
+      fail (file_r, file_o)
 
 let q_sysconfig sysconfig =
   let vers = read_process "uname -r " in
@@ -213,12 +224,12 @@ let q_sysconfig sysconfig =
         let sysref = Ast.Base.Kernel { k_version = vers; k_arch = Some arch } in
 	fail (sysref, sysconfig)
 
-let q_system system =
+let q_system run system =
   let syname = system.Dtd.sys_name in
   let list_sys_conf = system.Dtd.sys_config in
   let lst = List.fold_left
     (fun acc elt ->
-      let elt = q_sysconfig elt in
+      let elt = run_or_skip run q_sysconfig elt in
       match elt with
       | Ast.Result_info.Ok _ -> elt::acc
       | Ast.Result_info.Fail _ -> acc
@@ -228,17 +239,17 @@ let q_system system =
     list_sys_conf in
   {Result.sys_name = syname ; Result.sys_config = lst }
 
-let q_node_desc node_desc =
+let q_node_desc run node_desc =
     match node_desc with
-      |Dtd.Mount mount ->  Mount (q_mount mount)
-      |Dtd.Daemon daemon -> Daemon (q_daemon daemon)
-      |Dtd.Packages packages -> Packages (q_packages packages)
-      |Dtd.System system -> System (q_system system)
-      |Dtd.File file -> File (q_file file)
+      |Dtd.Mount mount ->  Mount (run_or_skip run q_mount mount)
+      |Dtd.Daemon daemon -> Daemon (run_or_skip run q_daemon daemon)
+      |Dtd.Packages packages -> Packages (q_packages run packages)
+      |Dtd.System system -> System (q_system run system)
+      |Dtd.File file -> File (q_file run file)
 
 let q_node in_classes node =
   let run = in_classes node.Dtd.n_classes in
-  let list_nde = List.map q_node_desc node.Dtd.n_desc  in
+  let list_nde = List.map (q_node_desc run) node.Dtd.n_desc  in
   { n_role = node.Dtd.n_role;
     n_classes = node.Dtd.n_classes;
     n_type = node.Dtd.n_type;
@@ -370,7 +381,7 @@ let q_hardware in_classes hardware =
  * Main function of the module to run the entire set of tests.
  *)
 
-let run my_hostname cluster =
+let run ~hostname:my_hostname cluster =
   let in_class a_classname =
     try
       let a_class = List.find (fun c -> c.Ast.c_name = a_classname) cluster.Dtd.classes in
