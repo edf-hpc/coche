@@ -308,8 +308,8 @@ let q_netconfig in_classes netconfig =
  *)
 
 let q_disk disk =
-  let output = read_process (__ "lsblk -n -d %s 2>/dev/null | awk '{ print $4 }'" disk.device) in
-  let output = ExtString.String.strip output in
+  let output = read_process (__ "lsblk -n -d %s 2>/dev/null | awk '{ print $4 }' | sed 's@,@.@'" disk.device) in
+  let output = (ExtString.String.strip output) ^ "B" in
   try
     let siz = Units.Size.make output in
     match disk.size with
