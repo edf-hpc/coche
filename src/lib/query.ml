@@ -127,23 +127,49 @@ let q_daemon daemon =
 
 let q_mount mount =
   let output_lines = read_process_lines "mount | awk '{ print $1,$3,$4,$5 }'" in
-  let elem = List.find (fun s -> contains s mount.m_name) output_lines in
-  let mount_point = (List.nth (ExtString.String.nsplit " " elem) 1) in
-  let mount_fstype = (List.nth (ExtString.String.nsplit " " elem) 2) in
-  let mount_option = (List.nth (ExtString.String.nsplit " " elem) 3) in
-  if (mount.m_options = Some mount_option &&
-      mount.m_fstype = Some mount_fstype &&
-      mount.m_mountpoint = mount_point)
-  then ok mount
-  else
-    fail ({ m_name = mount.m_name;
-	    m_options= Some mount_option;
-	    m_mountpoint= mount_point;
-	    m_fstype = Some mount_fstype;
-	    m_device = mount.m_device;
-	    m_size = mount.m_size;
-            m_quota = mount.m_quota},
-          mount)
+  let failed = { m_name = mount.m_name;
+	         m_options = None;
+	         m_mountpoint = mount.m_mountpoint;
+	         m_fstype = None;
+	         m_device = mount.m_device;
+	         m_size = None;
+                 m_quota = [] (* FIXME: Quota check is not implemented! *)
+               }
+  in
+  try
+    let elem = List.find (fun s -> contains s mount.m_name) output_lines in
+    let size = read_process (__ "df -h -P 2>/dev/null | sed -n 's@^%s *\\([^ ]*\\).*$@\\1@p'" mount.m_device) in
+    let size = Units.Size.make (let s = ExtString.String.strip size in if s = "" then "0" else s^"B") in
+    begin match ExtString.String.nsplit " " elem with
+          | _ :: mount_point :: mount_fstype :: mount_options :: [] ->
+             if mount.m_options = Some mount_options (* FIXME: Options can be in a different order *)
+                && mount.m_fstype = Some mount_fstype
+                && mount.m_mountpoint = mount_point
+             then
+               ok mount
+             else fail ({ failed with m_options = Some mount_options;
+                                      m_mountpoint = mount_point;
+                                      m_fstype = Some mount_fstype;
+                                      m_size = Some size;
+                        }
+                       , mount)
+          | _ :: mount_point :: mount_fstype :: [] ->
+             if mount.m_options = None
+                && mount.m_fstype = Some mount_fstype
+                && mount.m_mountpoint = mount_point
+             then
+               ok mount
+             else fail ({ failed with m_options = None;
+                                      m_mountpoint = mount_point;
+                                      m_fstype = Some mount_fstype;
+                                      m_size = Some size;
+                        }
+                       , mount)
+          | _ ->
+             fail (failed, mount)
+    end
+  with _ ->
+       fail (failed, mount)
 
 let q_file : (Dtd.file ->  Result.file) = fun file ->
   let file_name = file.f_name in
