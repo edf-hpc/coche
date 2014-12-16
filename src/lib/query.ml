@@ -201,62 +201,6 @@ let q_file : (Dtd.file ->  Result.file) = fun file ->
   else
     fail (file_r, file_o)
 
-let q_disk disk =
-  let output = read_process (__ "lsblk -n -d %s 2>/dev/null | awk '{ print $4 }'" disk.device) in
-  let output = ExtString.String.strip output in
-  try
-    let siz = Units.Size.make output in
-    match disk.size with
-    | Some size ->
-       if Units.Size.compare siz size = 0
-       then ok disk
-       else fail ({device = disk.device ; size = Some siz}, disk)
-    | None -> ok disk
-  with _ -> fail ({device = disk.device ; size = None}, disk)
-
-let q_memory memory =
-  let mem  = read_process "sed -n 's/MemTotal:[ ]*//p' /proc/meminfo" in
-  let swap = read_process "sed -n 's/SwapTotal:[ ]*//p' /proc/meminfo" in
-  let mem = (Units.Size.make mem) in
-  let swap = (Units.Size.make swap) in
-  let mem_rslt = {swap = Some swap ; ram = Some mem } in
-  match memory.swap, memory.ram  with
-  | Some m_swap, Some ram -> if (Units.Size.compare m_swap swap) = 0 && (Units.Size.compare ram mem) = 0
-                             then ok memory
-                             else fail (mem_rslt, memory)
-  | None, None  ->  ok memory
-  | None, Some ram ->  if (Units.Size.compare ram mem) = 0
-                       then ok memory
-                       else fail (mem_rslt, memory)
-  | Some m_swap, None ->  if (Units.Size.compare m_swap swap) = 0
-                          then ok memory
-                          else fail (mem_rslt, memory)
-
-let q_cpu cpu =
-  let maxf  = read_process "lscpu | grep 'CPU max MHz' | cut -d: -f2 | sed 's/,/./'" in
-  let maxf = (Units.Freq.make((ExtString.String.strip maxf)^"MHz")) in
-  let core = read_process "lscpu | sed -n 's@Core(s) per socket:[ ]*@@p'" in
-  let core = int_of_string (ExtString.String.strip core) in
-  let socket = read_process "lscpu | sed -n 's@Socket(s):[ ]*@@p'" in
-  let socket = int_of_string (ExtString.String.strip socket) in
-  let thread = read_process "lscpu | sed -n 's@Thread(s) per core:[ ]*@@p'" in
-  let thread = int_of_string (ExtString.String.strip thread) in
-  match cpu.maxfreq with
-  | Some maxfreq ->
-     if Units.Freq.compare maxfreq maxf = 0
-	&& cpu.ncores = Some core
-	&& cpu.nsockets = Some socket
-	&& cpu.nthreads = Some thread
-     then
-       ok cpu
-     else
-       fail ({ maxfreq = Some maxf;
-	       ncores = Some core;
-	       nsockets = Some socket;
-	       nthreads = Some thread
-	     }, cpu)
-  | None -> ok cpu
-
 let q_sysconfig sysconfig =
   let vers = read_process "uname -r " in
   let arch = read_process "uname -m"  in
@@ -351,6 +295,62 @@ let q_netconfig in_classes netconfig =
 (*
  * Hardware section
  *)
+
+let q_disk disk =
+  let output = read_process (__ "lsblk -n -d %s 2>/dev/null | awk '{ print $4 }'" disk.device) in
+  let output = ExtString.String.strip output in
+  try
+    let siz = Units.Size.make output in
+    match disk.size with
+    | Some size ->
+       if Units.Size.compare siz size = 0
+       then ok disk
+       else fail ({device = disk.device ; size = Some siz}, disk)
+    | None -> ok disk
+  with _ -> fail ({device = disk.device ; size = None}, disk)
+
+let q_memory memory =
+  let mem  = read_process "sed -n 's/MemTotal:[ ]*//p' /proc/meminfo" in
+  let swap = read_process "sed -n 's/SwapTotal:[ ]*//p' /proc/meminfo" in
+  let mem = (Units.Size.make mem) in
+  let swap = (Units.Size.make swap) in
+  let mem_rslt = {swap = Some swap ; ram = Some mem } in
+  match memory.swap, memory.ram  with
+  | Some m_swap, Some ram -> if (Units.Size.compare m_swap swap) = 0 && (Units.Size.compare ram mem) = 0
+                             then ok memory
+                             else fail (mem_rslt, memory)
+  | None, None  ->  ok memory
+  | None, Some ram ->  if (Units.Size.compare ram mem) = 0
+                       then ok memory
+                       else fail (mem_rslt, memory)
+  | Some m_swap, None ->  if (Units.Size.compare m_swap swap) = 0
+                          then ok memory
+                          else fail (mem_rslt, memory)
+
+let q_cpu cpu =
+  let maxf  = read_process "lscpu | grep 'CPU max MHz' | cut -d: -f2 | sed 's/,/./'" in
+  let maxf = (Units.Freq.make((ExtString.String.strip maxf)^"MHz")) in
+  let core = read_process "lscpu | sed -n 's@Core(s) per socket:[ ]*@@p'" in
+  let core = int_of_string (ExtString.String.strip core) in
+  let socket = read_process "lscpu | sed -n 's@Socket(s):[ ]*@@p'" in
+  let socket = int_of_string (ExtString.String.strip socket) in
+  let thread = read_process "lscpu | sed -n 's@Thread(s) per core:[ ]*@@p'" in
+  let thread = int_of_string (ExtString.String.strip thread) in
+  match cpu.maxfreq with
+  | Some maxfreq ->
+     if Units.Freq.compare maxfreq maxf = 0
+	&& cpu.ncores = Some core
+	&& cpu.nsockets = Some socket
+	&& cpu.nthreads = Some thread
+     then
+       ok cpu
+     else
+       fail ({ maxfreq = Some maxf;
+	       ncores = Some core;
+	       nsockets = Some socket;
+	       nthreads = Some thread
+	     }, cpu)
+  | None -> ok cpu
 
 let q_hardware_desc run hardware_desc =
   match hardware_desc with
