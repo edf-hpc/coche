@@ -33,8 +33,130 @@ end
 
 module M = Ast.Make(M_info)
 
+module P = struct
+
+  let packages_status fmt p =
+    List.iter
+      (fun (package, status) ->
+       let status = match status with
+         | `Installed -> "ii"
+         | `Absent -> "dd"
+       in
+       Format.fprintf fmt "@[<hv 2>%s %s@]@;" status package
+      )
+      p
+
+  let packages_match fmt p =
+    let p_match = match p with
+      | `Exact -> "=="
+      | `Subset -> ">="
+    in
+    Format.fprintf fmt "%s" p_match
+
+  let option_map f o =
+    match o with
+    | Some o -> Some (f o)
+    | None -> None
+
+  let option p prefix fmt o =
+    match o with
+    | Some o -> Format.fprintf fmt "%s%a" prefix p o
+    | None -> ()
+
+  let digest fmt d =
+    Format.fprintf fmt "MD5: %s" (Digest.to_hex d)
+
+  let file_kind fmt k =
+    let desc =
+      match k with
+      | Unix.S_REG -> "Regular file"
+      | Unix.S_DIR -> "Directory"
+      | Unix.S_CHR -> "Character device"
+      | Unix.S_BLK -> "Block device"
+      | Unix.S_LNK -> "Symbolic link"
+      | Unix.S_FIFO -> "Named pipe"
+      | Unix.S_SOCK -> "Socket"
+    in Format.pp_print_string fmt desc
+
+  let file fmt f =
+    Format.fprintf fmt "@[<hv 2>%s:@ %a@ %a@ %a@ %a@ %a@]@;"
+                   f.Ast.Base.f_name
+                   (option Format.pp_print_string "Owner: ") f.Ast.Base.f_owner
+                   (option Format.pp_print_string "Group: ") f.Ast.Base.f_group
+                   (option Format.pp_print_int "Permissions") f.Ast.Base.f_perms
+                   file_kind f.Ast.Base.f_type
+                   digest f.Ast.Base.f_same
+
+  let kernel fmt k =
+    match k with
+    | Ast.Base.Kernel k ->
+       Format.fprintf
+         fmt "%s %a"
+         k.Ast.Base.k_version
+         (option Format.pp_print_string "") k.Ast.Base.k_arch
+
+
+  let memory fmt m =
+    option Format.pp_print_string "Ram: " fmt (option_map Units.Size.to_string m.Ast.Base.ram);
+    (match m.Ast.Base.ram, m.Ast.Base.swap with Some _, Some _ -> Format.fprintf fmt "@ " | _ -> ());
+    option Format.pp_print_string "Swap: " fmt (option_map Units.Size.to_string m.Ast.Base.swap)
+
+  let disk fmt d =
+    Format.fprintf
+      fmt "%s %a"
+      d.Ast.Base.device
+      (option Format.pp_print_string "") (option_map Units.Size.to_string d.Ast.Base.size)
+
+  let cpu fmt c =
+    Format.fprintf
+      fmt "%a@ %a@ %a@ %a"
+      (option Format.pp_print_int "Socket(s): ") c.Ast.Base.nsockets
+      (option Format.pp_print_int "Core(s): ") c.Ast.Base.ncores
+      (option Format.pp_print_int "Thread(s): ") c.Ast.Base.nthreads
+      (option Format.pp_print_string "Freq: ") (option_map Units.Freq.to_string c.Ast.Base.maxfreq)
+
+  let quota fmt q =
+    let q_type = match q.Ast.Base.q_type with `Soft -> "soft" | `Hard -> "hard" in
+    let q_target = match q.Ast.Base.q_target with `User -> "user" | `Group -> "group" in
+    Format.fprintf fmt "%s\t%s\t%s" q_type q_target (Units.Size.to_string q.Ast.Base.q_size)
+
+  let mount fmt m =
+    Format.fprintf fmt "@[<hv 2>%s:@ %a@ %a@ %s@ on %s@ (%a)@]@;"
+                   m.Ast.Base.m_name
+                   (option Format.pp_print_string "-o ") m.Ast.Base.m_options
+                   (option Format.pp_print_string "-t ") m.Ast.Base.m_fstype
+                   m.Ast.Base.m_mountpoint
+                   m.Ast.Base.m_device
+                   (option Format.pp_print_string "Size: ") (option_map Units.Size.to_string m.Ast.Base.m_size);
+    match m.Ast.Base.m_quota with
+    | [] -> ()
+    | list ->
+       Format.fprintf fmt "@[<hv 2>Quota:@ @;";
+       List.iter
+         (fun q -> Format.fprintf fmt "@[<hv 2>%a@]@;" quota q)
+         list;
+       Format.fprintf fmt "@]@;"
+
+  let daemon fmt d =
+    Format.fprintf fmt "%s is %s"
+                   d.Ast.Base.d_name
+                   (match d.Ast.Base.d_status with `Running -> "running" | `Stopped -> "stopped")
+
+  let netconfig_kind fmt k =
+    let kind =
+      match k with
+      | Ast.Base.Physical -> "physical"
+      | Ast.Base.Virtual -> "virtual"
+    in Format.fprintf fmt "%s" kind
+
+  let netdevice fmt nd =
+    let state = match nd with `Down -> "down" | `Up -> "up" in
+    Format.pp_print_string fmt state
+
+end
+
 type t = M.t
-          
+
 let hostname = read_process "hostname"
 
 let r_result = function
@@ -259,8 +381,8 @@ let merge cluster1 cluster2 =
  * Printing functions
  *)
 
-let print_element fmt name elm =
-  Format.fprintf fmt "@[<v 2>Test %s@ " name;
+let print_element fmt p name elm =
+  Format.fprintf fmt "@[<v 2>Test %s [%a]@ " name p elm.M_info.value;
 
   let fold_hosts h = Network.string_of_hosts (Network.fold_hosts h) in
 
@@ -273,7 +395,12 @@ let print_element fmt name elm =
       begin
         Format.fprintf fmt "@[<hv 2>Bad:@ @;";
         List.iter
-	  (fun (a, elm) -> Format.fprintf fmt "@[<hv 2>%s@]@;" (fold_hosts elm))
+	  (fun (a, elm) ->
+             Format.fprintf
+               fmt "@[<hv 2>%s [%a]@]@;"
+               (fold_hosts elm)
+               p a
+          )
           elm.M_info.bad;
         Format.fprintf fmt "@]";
       end
@@ -281,22 +408,22 @@ let print_element fmt name elm =
   Format.fprintf fmt "@]@;<2 0>"
 
 let print_packages fmt packages =
-  print_element fmt "Packages(status)" packages.M.p_status;
-  print_element fmt "Packages(match)" packages.M.p_match
+  print_element fmt P.packages_status "Packages(status)" packages.M.p_status;
+  print_element fmt P.packages_match "Packages(match)" packages.M.p_match
 
 let print_file fmt file =
-  print_element fmt "File" file
+  print_element fmt P.file "File" file
 
 let print_system fmt system =
   Format.fprintf fmt "@[<hv 2>System tests (%s):@ @;" system.M.sys_name;
-  List.iter (print_element fmt "Kernel") system.M.sys_config;
+  List.iter (print_element fmt P.kernel "Kernel") system.M.sys_config;
   Format.fprintf fmt "@]@;<2 0>"
 
 let print_hardware_desc fmt hardware_desc =
   match hardware_desc with
-    | M.Memory memory -> print_element fmt "Memory" memory
-    | M.Disk disk -> print_element fmt "Disk" disk
-    | M.Cpu cpu -> print_element fmt "CPU" cpu
+    | M.Memory memory -> print_element fmt P.memory "Memory" memory
+    | M.Disk disk -> print_element fmt P.disk "Disk" disk
+    | M.Cpu cpu -> print_element fmt P.cpu "CPU" cpu
 
 let print_hardware fmt hardware =
   Format.fprintf fmt "@[<hv 2>Hardware tests (%s):@;" hardware.M.h_name;
@@ -306,9 +433,9 @@ let print_hardware fmt hardware =
 let print_node_desc fmt node_desc =
   match node_desc with
     | M.Mount mount ->
-      print_element fmt "Mount" mount
+      print_element fmt P.mount "Mount" mount
     | M.Daemon daemon ->
-      print_element fmt "Daemon" daemon
+      print_element fmt P.daemon "Daemon" daemon
     | M.Packages packages ->
       print_packages fmt packages
     | M.System system ->
@@ -324,8 +451,13 @@ let print_service fmt service =
 
 let print_netconfig fmt netconfig =
   Format.fprintf fmt "@[<hv 2>Netconfig (%s):@;" netconfig.M.nc_name;
-  print_element fmt "Kind" netconfig.M.nc_kind;
-  List.iter (fun netdevice -> print_element fmt "Netdevice" netdevice.M.nd_state) netconfig.M.nc_devices;
+  print_element fmt P.netconfig_kind "Kind" netconfig.M.nc_kind;
+  List.iter
+    (fun netdevice ->
+       let name = Printf.sprintf "%s is" netdevice.M.nd_name in
+       print_element fmt P.netdevice name netdevice.M.nd_state
+    )
+    netconfig.M.nc_devices;
   Format.fprintf fmt "@]@;<2 0>"
 
 let print_report fmt config =
