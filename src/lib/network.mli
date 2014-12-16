@@ -60,5 +60,6 @@ val compare : ipv4 -> ipv4 -> int
 
 val is_member : ipv4 -> cidr -> bool
 val are_members : range -> cidr -> bool
+val in_range : ipv4 -> range -> bool
 
 val is_host_member : string -> hosts -> bool

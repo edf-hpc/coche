@@ -441,4 +441,14 @@ and read_hosts buff = parse
     let hosts = expand_hosts hosts in
     List.mem host hosts
 
+  let in_range addr range =
+    let blocks = block_of_range range in
+    List.exists
+      (fun (block_start, block_end) ->
+       Pervasives.(&&)
+         (compare block_start addr < 0)
+         (compare addr block_end < 0)
+      )
+      blocks
+
 }
