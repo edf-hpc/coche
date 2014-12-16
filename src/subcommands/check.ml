@@ -112,17 +112,15 @@ let get_remote_file (password, host) file1 file2 =
   in ()
 
 let launch_worker (password, host) =
+  let flags = [|tmp_binary_name; "check"; "-worker"|] in
+  let flags = if !debug then Array.append flags [|"-debug"|] else flags in
+  let flags = Array.append flags [|"-cluster"; tmp_cluster_name ^ "." ^ host|] in
   let _ =
     try begin
       Terminal.ssh
 	host
 	password
-	[|tmp_binary_name;
-	  "check";
-	  "-worker";
-          "-cluster";
-          tmp_cluster_name ^ "." ^ host
-	|]
+        flags
     end
     with
       | Errors.Error e ->
@@ -133,22 +131,37 @@ let launch_worker (password, host) =
   in ()
 
 let f_worker (password, host) =
+  let cluster_file = tmp_cluster_name ^ "." ^ host in
   send_coche (password, host) tmp_binary_name;
-  send_file (password, host) tmp_cluster_name (tmp_cluster_name ^ "." ^ host);
+  send_file (password, host) tmp_cluster_name cluster_file;
   launch_worker (password, host);
   get_remote_file (password, host)
     (tmp_cluster_name ^ "." ^ host ^ ".report")
-    (report_filename host)
+    (report_filename host);
+  if not !debug then
+    ignore (Terminal.ssh host password [|"/bin/rm"; "-f";
+                                         cluster_file;
+                                         tmp_binary_name;
+                                         tmp_cluster_name ^ "." ^ host ^ ".report"
+                                        |])
 
 let master ((password, host), dest) _ =
   let partial_report =
     try
       let file = report_filename host in
-      if (Unix.stat file).Unix.st_size = 0 then
-        raise (Unix.Unix_error (Unix.ENOENT, "stat", file))
-      else
-        let report : Report.t = Utils.with_in_file file input_value in
-        Done report
+      let result =
+        if (Unix.stat file).Unix.st_size = 0 then
+          raise (Unix.Unix_error (Unix.ENOENT, "stat", file))
+        else
+          let report : Report.t = Utils.with_in_file file input_value in
+          let () = if not !debug then Unix.unlink file in
+          Done report
+      in
+      let () =
+        if not !debug then
+          ignore (Terminal.ssh host password [|"/bin/rm"; "-f"; file|])
+      in
+      result
     with Unix.Unix_error (Unix.ENOENT, _, _) ->
       Failed host
   in
@@ -190,6 +203,7 @@ let main () =
         let () = Utils.with_out_file tmp_cluster_name (fun fd -> output_value fd cluster) in
         (* Launch tests *)
         let () = compute ~worker:f_worker ~master hosts in
+        let () = if not !debug then Unix.unlink tmp_cluster_name in
         (* Merge reports *)
         let good_reports, bad_hosts =
           List.partition
