@@ -82,6 +82,8 @@ let () =
         (* subcommands *)
         dep ["coche"; "byte"] & cmo_subcommands;
         dep ["coche"; "native"] & cmx_subcommands;
+        dep ["subcommands"; "byte"] & ["cocheLib.cma"];
+        dep ["subcommands"; "native"] & ["cocheLib.cmxa"];
         flag ["ocaml"; "compile"; "subcommands"] (S[A"-I"; A"lib"]);
 
         (* cocheLib *)
