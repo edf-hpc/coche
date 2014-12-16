@@ -31,8 +31,8 @@ open Units
 (*
  * General use functions
  *)
-let contains s1 s2 =
-  ExtString.String.exists s2 s1
+let contains str sub =
+  ExtString.String.exists str sub
 
 let skip t = Ast.Result_info.Skip t
 let ok t = Ast.Result_info.Ok t

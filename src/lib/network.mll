@@ -425,8 +425,8 @@ and read_hosts buff = parse
   let is_member addr cidr =
     let block_start, block_end = block_of_cidr cidr in
     Pervasives.(&&)
-      (compare block_start addr < 0)
-      (compare addr block_end < 0)
+      (compare block_start addr <= 0)
+      (compare addr block_end <= 0)
 
   let range_elt_is_member cidr range =
     let range_start, range_end = block_of_range_elt range in
@@ -446,8 +446,8 @@ and read_hosts buff = parse
     List.exists
       (fun (block_start, block_end) ->
        Pervasives.(&&)
-         (compare block_start addr < 0)
-         (compare addr block_end < 0)
+         (compare block_start addr <= 0)
+         (compare addr block_end <= 0)
       )
       blocks
 
