@@ -53,7 +53,7 @@ let __ = Printf.sprintf
  *)
 
 let q_packages packages =
-  let output_lines = read_process_lines "dpkg -l| egrep -v '[|\\/]' | grep -v '+-='| awk '{ print $1,$2 }'" in
+  let output_lines = read_process_lines "dpkg -l | awk 'NR > 5 { print $1,$2 }'" in
   let nb_packages = List.length output_lines in
   let dpkg_l = List.fold_left
     (fun map line ->
