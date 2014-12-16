@@ -46,6 +46,8 @@ let run_or_skip run f t =
 
 module SMap = Map.Make(String)
 
+let __ = Printf.sprintf
+
 (*
  * Services section
  *)
@@ -284,34 +286,31 @@ let q_service in_classes service =
  *)
 
 let q_netdevice should_run netdevice =
-  let nom = netdevice.Dtd.nd_name in
+  let name = netdevice.Dtd.nd_name in
   let st = if should_run then
     begin
-      let out = read_process ("/sbin/ifconfig "^nom)in
+      let out = read_process (__ "/bin/ip link show dev %s" name)in
       let state =
-        if contains out "Up"
+        if contains out " UP "
         then
           `Up
         else
           `Down
       in
-      let reslt = read_process ("/sbin/ifconfig "^nom^"|grep 'inet '| awk  '{print $2 }'") in
-      try
-        let adres = Network.ip (String.sub reslt 4 ((String.length reslt)-4)) in
-        let l = Network.expand_range(netdevice.Dtd.nd_target.Ast.a_range) in
-        if Network.compare adres (Network.ip (List.nth l 0)) > 0
-           && Network.compare adres (Network.ip (List.nth (List.rev l) 0)) < 0
-           && state = netdevice.Dtd.nd_state
-        then
-          ok netdevice.Dtd.nd_state
-        else fail (state, netdevice.Dtd.nd_state)
-      with Invalid_argument "String.sub" ->
+      let result = read_process (__ "/bin/ip addr show dev %s | sed -n 's@[ ]*inet6\\?[ ]*\\([^ /]*\\).*$@\\1@pg'" name) in
+      let addrs = ExtString.String.nsplit result "\n" in
+      let addrs = List.fold_left (fun addrs addr -> try (Network.ip addr) :: addrs with _ -> addrs) [] addrs in
+      if List.exists (fun addr -> Network.in_range addr netdevice.Dtd.nd_target.Ast.a_range) addrs
+         && state = netdevice.Dtd.nd_state
+      then
+        ok netdevice.Dtd.nd_state
+      else
         fail (state, netdevice.Dtd.nd_state)
     end
   else
     skip netdevice.Dtd.nd_state
   in
-  {Result.nd_name = nom ;
+  {Result.nd_name = name;
    nd_target = netdevice.Dtd.nd_target;
    nd_state = st }
 
