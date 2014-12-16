@@ -64,7 +64,7 @@ module P = struct
     | None -> ()
 
   let digest fmt d =
-    Format.fprintf fmt "MD5: %s" (Digest.to_hex d)
+    Format.fprintf fmt "MD5:%s" (Digest.to_hex d)
 
   let file_kind fmt k =
     let desc =
@@ -79,11 +79,11 @@ module P = struct
     in Format.pp_print_string fmt desc
 
   let file fmt f =
-    Format.fprintf fmt "@[<hv 2>%s:@ %a@ %a@ %a@ %a@ %a@]@;"
+    Format.fprintf fmt "@[<hv 2>%s: %a %a %a (%a) %a@]@;"
                    f.Ast.Base.f_name
-                   (option Format.pp_print_string "Owner: ") f.Ast.Base.f_owner
-                   (option Format.pp_print_string "Group: ") f.Ast.Base.f_group
-                   (option Format.pp_print_int "Permissions") f.Ast.Base.f_perms
+                   (option Format.pp_print_int "") f.Ast.Base.f_perms
+                   (option Format.pp_print_string "") f.Ast.Base.f_owner
+                   (option Format.pp_print_string "") f.Ast.Base.f_group
                    file_kind f.Ast.Base.f_type
                    digest f.Ast.Base.f_same
 
@@ -97,9 +97,9 @@ module P = struct
 
 
   let memory fmt m =
-    option Format.pp_print_string "Ram: " fmt (option_map Units.Size.to_string m.Ast.Base.ram);
-    (match m.Ast.Base.ram, m.Ast.Base.swap with Some _, Some _ -> Format.fprintf fmt "@ " | _ -> ());
-    option Format.pp_print_string "Swap: " fmt (option_map Units.Size.to_string m.Ast.Base.swap)
+    option Format.pp_print_string "Ram:" fmt (option_map Units.Size.to_string m.Ast.Base.ram);
+    (match m.Ast.Base.ram, m.Ast.Base.swap with Some _, Some _ -> Format.fprintf fmt " " | _ -> ());
+    option Format.pp_print_string "Swap:" fmt (option_map Units.Size.to_string m.Ast.Base.swap)
 
   let disk fmt d =
     Format.fprintf
@@ -108,12 +108,15 @@ module P = struct
       (option Format.pp_print_string " ") (option_map Units.Size.to_string d.Ast.Base.size)
 
   let cpu fmt c =
+    let l_numbers = [c.Ast.Base.nsockets; c.Ast.Base.ncores; c.Ast.Base.nthreads] in
+    let l_labels = ["sockets"; "cores"; "threads"] in
+    let pf = Printf.sprintf in
+    let labels = List.map2 (fun l -> function | Some n -> pf "%d %s" n l | _ -> "") l_labels l_numbers in
+    let labels = List.filter (fun text -> text <> "") labels in
     Format.fprintf
-      fmt "%a@ %a@ %a@ %a"
-      (option Format.pp_print_int "Socket(s): ") c.Ast.Base.nsockets
-      (option Format.pp_print_int "Core(s): ") c.Ast.Base.ncores
-      (option Format.pp_print_int "Thread(s): ") c.Ast.Base.nthreads
-      (option Format.pp_print_string "Freq: ") (option_map Units.Freq.to_string c.Ast.Base.maxfreq)
+      fmt "%s%a"
+      (String.concat " x " labels)
+      (option Format.pp_print_string " @") (option_map Units.Freq.to_string c.Ast.Base.maxfreq)
 
   let quota fmt q =
     let q_type = match q.Ast.Base.q_type with `Soft -> "soft" | `Hard -> "hard" in
@@ -121,7 +124,7 @@ module P = struct
     Format.fprintf fmt "%s\t%s\t%s" q_type q_target (Units.Size.to_string q.Ast.Base.q_size)
 
   let mount fmt m =
-    Format.fprintf fmt "@[<hv 2>%s:@ %a@ %a@ %s@ on %s@ (%a)@]@;"
+    Format.fprintf fmt "@[<hv 2>%s: %a %a %s on %s (%a)@]@;"
                    m.Ast.Base.m_name
                    (option Format.pp_print_string "-o ") m.Ast.Base.m_options
                    (option Format.pp_print_string "-t ") m.Ast.Base.m_fstype
