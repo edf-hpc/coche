@@ -171,8 +171,9 @@ let master ((password, host), dest) _ =
 let main () =
   if !worker then
     begin
+      let my_hostname = FilePath.get_extension !tmp_cluster_file in
       let cluster = Utils.with_in_file !tmp_cluster_file input_value in
-      let result = Query.run cluster in
+      let result = Query.run my_hostname cluster in
       let report = Report.make result in
       let tmp_report_name = !tmp_cluster_file ^ ".report" in
       Utils.with_out_file tmp_report_name (fun fd -> output_value fd report)

@@ -31,8 +31,15 @@ open Units
 let contains s1 s2 =
   ExtString.String.exists s2 s1
 
+let skip t = Ast.Result_info.Skip t
 let ok t = Ast.Result_info.Ok t
 let fail (t1,t2) = Ast.Result_info.Fail (t1,t2)
+
+let run_or_skip run f t =
+  if run then
+    f t
+  else
+    skip t
 
 module SMap = Map.Make(String)
 
@@ -159,35 +166,39 @@ let q_file : (Dtd.file ->  Result.file) = fun file ->
   else
     fail (file_r, file_o)
 
-let q_netdevice netdevice =
+let q_netdevice should_run netdevice =
   let nom = netdevice.Dtd.nd_name in
-  let out = read_process ("/sbin/ifconfig "^nom)in
-  let state =
-    if contains out "Up"
-    then
-      `Up
-    else
-      `Down
-  in
-  let reslt = read_process ("/sbin/ifconfig "^nom^"|grep 'inet '| awk  '{print $2 }'") in
-  let st =
-    try
-      let adres = Network.ip (String.sub reslt 4 ((String.length reslt)-4)) in
-      let l = Network.expand_range(netdevice.Dtd.nd_target.Ast.a_range) in
-      if Network.compare adres (Network.ip (List.nth l 0)) > 0
-         && Network.compare adres (Network.ip (List.nth (List.rev l) 0)) < 0
-         && state = netdevice.Dtd.nd_state
-      then
-        ok netdevice.Dtd.nd_state
-      else fail (state, netdevice.Dtd.nd_state)
-    with Invalid_argument "String.sub" ->
-      fail (state, netdevice.Dtd.nd_state)
+  let st = if should_run then
+    begin
+      let out = read_process ("/sbin/ifconfig "^nom)in
+      let state =
+        if contains out "Up"
+        then
+          `Up
+        else
+          `Down
+      in
+      let reslt = read_process ("/sbin/ifconfig "^nom^"|grep 'inet '| awk  '{print $2 }'") in
+      try
+        let adres = Network.ip (String.sub reslt 4 ((String.length reslt)-4)) in
+        let l = Network.expand_range(netdevice.Dtd.nd_target.Ast.a_range) in
+        if Network.compare adres (Network.ip (List.nth l 0)) > 0
+           && Network.compare adres (Network.ip (List.nth (List.rev l) 0)) < 0
+           && state = netdevice.Dtd.nd_state
+        then
+          ok netdevice.Dtd.nd_state
+        else fail (state, netdevice.Dtd.nd_state)
+      with Invalid_argument "String.sub" ->
+        fail (state, netdevice.Dtd.nd_state)
+    end
+  else
+    skip netdevice.Dtd.nd_state
   in
   {Result.nd_name = nom ;
    nd_target = netdevice.Dtd.nd_target;
    nd_state = st }
 
-let  q_disk disk =
+let q_disk disk =
   let output_lines = read_process_lines "df -h -P 2>/dev/null | grep -E '(sd)'| awk '{print $1, $2}'" in
   try
     let elem = List.find (fun s -> contains s disk.device) output_lines in
@@ -201,7 +212,6 @@ let  q_disk disk =
     | None -> ok disk
   with Not_found -> fail ({device = disk.device ; size = Some (Units.Size.make "0")}, disk)
 
-
 let q_memory memory =
   let mem  = read_process "sed -n 's/MemTotal:[ ]*//p' /proc/meminfo" in
   let swap = read_process "sed -n 's/SwapTotal:[ ]*//p' /proc/meminfo" in
@@ -209,16 +219,16 @@ let q_memory memory =
   let swap = (Units.Size.make swap) in
   let mem_rslt = {swap = Some swap ; ram = Some mem } in
   match memory.swap, memory.ram  with
-    | Some m_swap, Some ram -> if (Units.Size.compare m_swap swap) = 0 && (Units.Size.compare ram mem) = 0
-      then ok memory
-      else fail (mem_rslt, memory)
-    | None, None  ->  ok memory
-    | None, Some ram ->  if (Units.Size.compare ram mem) = 0
-      then ok memory
-      else fail (mem_rslt, memory)
-    | Some m_swap, None ->  if (Units.Size.compare m_swap swap) = 0
-      then ok memory
-      else fail (mem_rslt, memory)
+  | Some m_swap, Some ram -> if (Units.Size.compare m_swap swap) = 0 && (Units.Size.compare ram mem) = 0
+                             then ok memory
+                             else fail (mem_rslt, memory)
+  | None, None  ->  ok memory
+  | None, Some ram ->  if (Units.Size.compare ram mem) = 0
+                       then ok memory
+                       else fail (mem_rslt, memory)
+  | Some m_swap, None ->  if (Units.Size.compare m_swap swap) = 0
+                          then ok memory
+                          else fail (mem_rslt, memory)
 
 let q_cpu cpu =
   let maxf  = read_process "lscpu | grep 'CPU max MHz' | cut -d: -f2 | sed 's/,/./'" in
@@ -230,21 +240,20 @@ let q_cpu cpu =
   let thread = read_process "lscpu | sed -n 's@Thread(s) per core:[ ]*@@p'" in
   let thread = int_of_string (ExtString.String.strip thread) in
   match cpu.maxfreq with
-    |Some maxfreq ->
-      if Units.Freq.compare maxfreq maxf = 0 &&
-	 cpu.ncores = Some core &&
-	 cpu.nsockets = Some socket &&
-	 cpu.nthreads = Some thread
-      then
-	ok cpu
-      else
-	fail ({ maxfreq = Some maxf;
-	        ncores = Some core;
-	        nsockets = Some socket;
-	        nthreads = Some thread
+  | Some maxfreq ->
+     if Units.Freq.compare maxfreq maxf = 0
+	&& cpu.ncores = Some core
+	&& cpu.nsockets = Some socket
+	&& cpu.nthreads = Some thread
+     then
+       ok cpu
+     else
+       fail ({ maxfreq = Some maxf;
+	       ncores = Some core;
+	       nsockets = Some socket;
+	       nthreads = Some thread
 	     }, cpu)
-    | None -> ok cpu
-
+  | None -> ok cpu
 
 let q_sysconfig sysconfig =
   let vers = read_process "uname -r " in
@@ -265,22 +274,24 @@ let q_system system =
     (fun acc elt ->
       let elt = q_sysconfig elt in
       match elt with
-      | (Ast.Result_info.Ok _) -> elt::acc
-      | (Ast.Result_info.Fail _) -> acc
+      | Ast.Result_info.Ok _ -> elt::acc
+      | Ast.Result_info.Fail _ -> acc
+      | Ast.Result_info.Skip _ -> acc
     )
     []
     list_sys_conf in
   {Result.sys_name = syname ; Result.sys_config = lst }
 
-let q_hardware_desc hardware_desc =
+let q_hardware_desc run hardware_desc =
   match hardware_desc with
-    |Dtd.Memory memory -> Memory (q_memory memory)
-    |Dtd.Disk disk -> Disk (q_disk disk)
-    |Dtd.Cpu cpu -> Cpu (q_cpu cpu)
+    |Dtd.Memory memory -> Memory (run_or_skip run q_memory memory)
+    |Dtd.Disk disk -> Disk (run_or_skip run q_disk disk)
+    |Dtd.Cpu cpu -> Cpu (run_or_skip run q_cpu cpu)
 
-let q_hardware hardware =
+let q_hardware in_classes hardware =
+  let should_run = in_classes hardware.Dtd.h_classes in
   let name = hardware.Dtd.h_name in
-  let list_res= List.map q_hardware_desc hardware.Dtd.h_desc in
+  let list_res= List.map (q_hardware_desc should_run) hardware.Dtd.h_desc in
   { h_name = name;
     h_desc = list_res;
     h_classes = hardware.Dtd.h_classes }
@@ -293,7 +304,8 @@ let q_node_desc node_desc =
       |Dtd.System system -> System (q_system system)
       |Dtd.File file -> File (q_file file)
 
-let q_node node =
+let q_node in_classes node =
+  let run = in_classes node.Dtd.n_classes in
   let list_nde = List.map q_node_desc node.Dtd.n_desc  in
   { n_role = node.Dtd.n_role;
     n_classes = node.Dtd.n_classes;
@@ -301,26 +313,39 @@ let q_node node =
     n_ha = node.Dtd.n_ha;
     n_desc = list_nde }
 
-let q_service service =
-  let list_serv = List.map q_node service.Dtd.s_nodes in
+let q_service in_classes service =
+  let list_serv = List.map (q_node in_classes) service.Dtd.s_nodes in
   {s_name = service.Dtd.s_name;
    s_nodes = list_serv }
 
-
-let q_netconfig netconfig =
-  let list_conf = List.map q_netdevice netconfig.Dtd.nc_devices in
-  let kind = ok netconfig.Dtd.nc_kind in
+let q_netconfig in_classes netconfig =
+  let should_run = in_classes netconfig.Dtd.nc_classes in
+  let list_conf = List.map (q_netdevice should_run) netconfig.Dtd.nc_devices in
+  let kind = (if should_run then ok else skip) netconfig.Dtd.nc_kind in
   { nc_name = netconfig.Dtd.nc_name;
     nc_classes = netconfig.Dtd.nc_classes;
     nc_kind = kind;
     nc_devices = list_conf}
 
-let run cluster =
+let run my_hostname cluster =
+  let in_class a_classname =
+    try
+      let a_class = List.find (fun c -> c.Ast.c_name = a_classname) cluster.Dtd.classes in
+      let check area = Network.is_host_member my_hostname area.Ast.a_hosts in
+      List.exists check a_class.Ast.c_areas
+    with Not_found -> false
+  in
+  let in_classes classes =
+    List.exists (fun c -> in_class c.Ast.c_name) classes
+  in
   List.map
     (fun config ->
       match config with
-	|Dtd.Netconfig netconfig -> Netconfig (q_netconfig netconfig)
-	|Dtd.Hardware hardware -> Hardware (q_hardware hardware)
-	|Dtd.Service service -> Service (q_service service)
+      | Dtd.Netconfig netconfig ->
+         Netconfig (q_netconfig in_classes netconfig)
+      | Dtd.Hardware hardware ->
+         Hardware (q_hardware in_classes hardware)
+      | Dtd.Service service ->
+         Service (q_service in_classes service)
     )
     cluster.Dtd.config

@@ -170,6 +170,11 @@ let r_result = function
       M_info.good = [];
       M_info.bad = (elm, hostname::[])::[]
     }
+  | Ast.Result_info.Skip elm ->
+    { M_info.value = elm;
+      M_info.good = [];
+      M_info.bad = []
+    }
 
 let r_packages packages =
   let p_status = r_result packages.Result.p_status in

@@ -201,7 +201,7 @@ end
 module Dtd = Make(Id)
 
 module Result_info = struct
-  type 'a t = Ok of 'a | Fail of 'a * 'a
+  type 'a t = Ok of 'a | Fail of 'a * 'a | Skip of 'a
   type file_info = Digest.t
   let compare = Pervasives.compare
 end
