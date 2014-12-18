@@ -28,7 +28,6 @@ let xml_file = ref None
 let debug = ref false
 let dirty = ref false
 let worker = ref false
-let nproc = ref (Utils.processors_count ())
 let config = ref ""
 let tmp_cluster_file = ref ""
 let master_pwd = ref ""
@@ -44,17 +43,19 @@ let set_dtd f =
   then Xml.dtd_file := f
   else raise (Arg.Bad "Specified DTD file doesn't exist")
 
+let set_parallelism p =
+  if p > 0 && p <= (Utils.processors_count ()) then
+    set_number_of_cores p
+
 let spec = [
   "-dtd", Arg.String set_dtd, " Set DTD file";
   "-debug", Arg.Unit set_debug, " Enable debug mode";
   "-dirty", Arg.Set dirty, " Enable dirty mode";
-  "-nproc", Arg.Set_int nproc, " Specify how many cores to use";
+  "-p", Arg.Int set_parallelism, " Specify parallelism level";
   "-worker", Arg.Set worker, " (internal usage only)";
   "-cluster", Arg.Set_string tmp_cluster_file, " (internal usage only)";
 ]
 
-let () =
-  set_number_of_cores !nproc
 
 let tmp_name suffix =
   let name = Filename.temp_file "Coche_" suffix in
