@@ -42,7 +42,7 @@ let print st =
     else
       List.nth seq (completed mod seq_len)
   in
-  Printf.printf "%c Finished (\027[1;32m%4d\027[0m)\tFailed (\027[1;31m%4d\027[0m)\tTotal (%4d)"
+  Printf.printf "%c Finished (\027[1;32m%4d\027[0m)\tFailed (\027[1;31m%4d\027[0m)\tTotal (%4d)%!"
                 pos
                 st.finished
                 st.failed

@@ -177,6 +177,7 @@ let main () =
       | None ->
         Errors.exit Errors.XML_file_not_specified
     in
+    let () = Progress.print global_status in
     try
       let netclass =
         List.find
