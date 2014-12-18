@@ -79,9 +79,9 @@ module Base = struct
 
   and cpu = {
     maxfreq: Units.Freq.t option;
-    ncores: int option;
-    nsockets: int option;
-    nthreads: int option;
+    cores: int option;
+    sockets: int option;
+    threads: int option;
   }
 
   and sysconfig =

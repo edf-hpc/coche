@@ -356,16 +356,16 @@ let q_cpu cpu =
   match cpu.maxfreq with
   | Some maxfreq ->
      if Units.Freq.compare maxfreq maxf = 0
-	&& cpu.ncores = Some core
-	&& cpu.nsockets = Some socket
-	&& cpu.nthreads = Some thread
+	&& cpu.cores = Some core
+	&& cpu.sockets = Some socket
+	&& cpu.threads = Some thread
      then
        ok cpu
      else
        fail ({ maxfreq = Some maxf;
-	       ncores = Some core;
-	       nsockets = Some socket;
-	       nthreads = Some thread
+	       cores = Some core;
+	       sockets = Some socket;
+	       threads = Some thread
 	     }, cpu)
   | None -> ok cpu
 

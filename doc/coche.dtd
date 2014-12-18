@@ -46,8 +46,12 @@
 		<!ELEMENT cpu  EMPTY >
 			<!-- maxfreq : ... -->
 			<!ATTLIST cpu maxfreq CDATA #IMPLIED >
-			<!-- ncores : ... -->
-			<!ATTLIST cpu ncores CDATA #IMPLIED >
+			<!-- sockets : ... -->
+			<!ATTLIST cpu sockets CDATA #IMPLIED >
+			<!-- cores : ... -->
+			<!ATTLIST cpu cores CDATA #IMPLIED >
+			<!-- threads : ... -->
+			<!ATTLIST cpu threads CDATA #IMPLIED >
 	<!ELEMENT service ((node | include)+) >
 		<!ATTLIST service name CDATA #REQUIRED >
 		<!ELEMENT node ((mount | daemon | packages | system | file)*) >

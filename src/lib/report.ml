@@ -108,7 +108,7 @@ module P = struct
       (option Format.pp_print_string " ") (option_map Units.Size.to_string d.Ast.Base.size)
 
   let cpu fmt c =
-    let l_numbers = [c.Ast.Base.nsockets; c.Ast.Base.ncores; c.Ast.Base.nthreads] in
+    let l_numbers = [c.Ast.Base.sockets; c.Ast.Base.cores; c.Ast.Base.threads] in
     let l_labels = ["sockets"; "cores"; "threads"] in
     let pf = Printf.sprintf in
     let labels = List.map2 (fun l -> function | Some n -> pf "%d %s" n l | _ -> "") l_labels l_numbers in
