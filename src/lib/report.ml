@@ -290,7 +290,7 @@ let mr_file file1 file2 =
   merge_report_info file1 file2
 
 let mr_netdevice netdevice1 netdevice2 =
-  let state = merge_report_info netdevice1.M.nd_state netdevice1.M.nd_state   in
+  let state = merge_report_info netdevice1.M.nd_state netdevice2.M.nd_state   in
   { M.nd_name = netdevice1.M.nd_name;
     M.nd_target = netdevice1.M.nd_target;
     M.nd_state = state
