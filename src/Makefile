@@ -24,7 +24,7 @@ PREFIX := /usr/local
 
 # Auto-detection
 ifeq ($(OCAMLBEST),)
-HAS_OPT := $(shell if which jocamlopt > /dev/null; then echo yes; fi)
+HAS_OPT := $(shell if which ocamlopt > /dev/null; then echo yes; fi)
 else ifeq ($(OCAMLBEST),native)
 HAS_OPT := yes
 else
