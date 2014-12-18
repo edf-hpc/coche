@@ -220,12 +220,14 @@ let main () =
             (function Done v -> v | Failed _ -> assert false)
             good_reports
         in
-        let _ =
-          List.iter
-            (function
-              | Done _ -> assert false
-              | Failed h -> Printf.printf "Bad host %s\n%!" h)
+        let failed_reports =
+          List.map
+            (function Done _ -> assert false | Failed v -> v)
             bad_hosts
+        in
+        let _ =
+          let failed = Network.fold_hosts failed_reports in
+          Printf.eprintf "E: Bad hosts %s\n%!" (Network.string_of_hosts failed)
         in
         let report =
           match good_reports with
