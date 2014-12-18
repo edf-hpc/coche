@@ -20,6 +20,9 @@
 
 let quiet = ref false
 
+let seq = ['|'; '/'; '-'; '\\']
+let seq_len = List.length seq
+
 type status = {
   mutable finished : int;
   mutable failed   : int;
@@ -32,7 +35,15 @@ let bol () = Printf.fprintf stdout "\r";;
 let print st =
   clear_to_eol ();
   bol ();
-  Printf.printf "Running Finished (%4d)\tFailed (%4d)\tTotal (%4d)"
+  let pos =
+    let completed = st.finished + st.failed in
+    if completed = st.total then
+      '='
+    else
+      List.nth seq (completed mod seq_len)
+  in
+  Printf.printf "%c Finished (%4d)\tFailed (%4d)\tTotal (%4d)"
+                pos
                 st.finished
                 st.failed
                 st.total
