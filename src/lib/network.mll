@@ -327,7 +327,7 @@ and read_hosts buff = parse
   let expand_hosts h =
     (* WARNING: We do not remove duplicates intentionally! *)
     let h = List.flatten (List.map (expand_hosts_elt [""]) h) in
-    List.sort compare_ipv4 h
+    List.sort Pervasives.compare h
 
   let fold_hosts h =
     let h = String.concat seq_sep h in
