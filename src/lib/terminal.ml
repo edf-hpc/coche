@@ -113,7 +113,7 @@ let rec interact fdTerm host password input =
       msg
   in
   if Pcre.pmatch ~rex:passwordRx msg || Pcre.pmatch ~rex:passphraseRx msg then
-    raise (Errors.Authentification_failed host)
+    raise (Authentification_failed host)
   else
     let () = match input with
       | Some input -> write_msg fdTerm input
@@ -147,6 +147,12 @@ let ssh host password command =
   let args = Array.append common_args command in
   run env host password "ssh" args None
 
+let ssh_no_errors host password command =
+  try
+    ignore (ssh host password command)
+  with _ ->
+    ()
+
 let scp host password files destination =
   let common_args, env = common_args "-r" in
   let args = Array.concat
@@ -155,3 +161,9 @@ let scp host password files destination =
       [| destination |]
     ] in
   run env host password "scp" args None
+
+let scp_no_errors host password files destination =
+  try
+    ignore (scp host password files destination)
+  with _ ->
+    ()

@@ -80,18 +80,11 @@ let report_filename host =
 
 let send_file (password, host) file1 file2 =
   let _ =
-    try
-      Terminal.scp
-	host
-	password
-	[| file1 |]
-	(Printf.sprintf "%s:%s" host file2)
-    with
-      | Errors.Error e ->
-	Errors.warn e; ""
-      | e ->
-	Printf.eprintf "E: %s\n%!" (Printexc.to_string e);
-	""
+    Terminal.scp
+      host
+      password
+      [| file1 |]
+      (Printf.sprintf "%s:%s" host file2)
   in ()
 
 let send_coche (password, host) file2 =
@@ -99,18 +92,11 @@ let send_coche (password, host) file2 =
 
 let get_remote_file (password, host) file1 file2 =
   let _ =
-    try
-      Terminal.scp
-	host
-	password
-	[|(Printf.sprintf "%s:%s" host file1)|]
-	file2
-    with
-      | Errors.Error e ->
-	Errors.warn e; ""
-      | e ->
-	Printf.eprintf "E: %s\n%!" (Printexc.to_string e);
-	""
+    Terminal.scp
+      host
+      password
+      [|(Printf.sprintf "%s:%s" host file1)|]
+      file2
   in ()
 
 let launch_worker (password, host) =
@@ -119,34 +105,31 @@ let launch_worker (password, host) =
   let flags = if !dirty then Array.append flags [|"-dirty"|] else flags in
   let flags = Array.append flags [|"-cluster"; tmp_cluster_name ^ "." ^ host|] in
   let _ =
-    try begin
-      Terminal.ssh
-	host
-	password
-        flags
-    end
-    with
-      | Errors.Error e ->
-	Errors.warn e; ""
-      | e ->
-	Printf.eprintf "E: %s\n%!" (Printexc.to_string e);
-	""
+    Terminal.ssh
+      host
+      password
+      flags
   in ()
 
+let global_status = Progress.make_status 0 0 0
+
 let f_worker (password, host) =
-  let cluster_file = tmp_cluster_name ^ "." ^ host in
-  send_coche (password, host) tmp_binary_name;
-  send_file (password, host) tmp_cluster_name cluster_file;
-  launch_worker (password, host);
-  get_remote_file (password, host)
-    (tmp_cluster_name ^ "." ^ host ^ ".report")
-    (report_filename host);
-  if not !dirty then
-    ignore (Terminal.ssh host password [|"/bin/rm"; "-f";
-                                         cluster_file;
-                                         tmp_binary_name;
-                                         tmp_cluster_name ^ "." ^ host ^ ".report"
-                                        |])
+  try
+    let cluster_file = tmp_cluster_name ^ "." ^ host in
+    send_coche (password, host) tmp_binary_name;
+    send_file (password, host) tmp_cluster_name cluster_file;
+    launch_worker (password, host);
+    get_remote_file (password, host)
+                    (tmp_cluster_name ^ "." ^ host ^ ".report")
+                    (report_filename host);
+    if not !dirty then
+      Terminal.ssh_no_errors host password [|"/bin/rm"; "-f";
+                                             cluster_file;
+                                             tmp_binary_name;
+                                             tmp_cluster_name ^ "." ^ host ^ ".report"
+                                            |]
+  with e ->
+    ()
 
 let master ((password, host), dest) _ =
   let partial_report =
@@ -158,14 +141,18 @@ let master ((password, host), dest) _ =
         else
           let report : Report.t = Utils.with_in_file file input_value in
           let () = if not !dirty then Unix.unlink file in
+          let () = global_status.Progress.finished <- global_status.Progress.finished + 1 in
+          let () = Progress.print global_status in
           Done report
       in
       let () =
         if not !dirty then
-          ignore (Terminal.ssh host password [|"/bin/rm"; "-f"; file|])
+          Terminal.ssh_no_errors host password [|"/bin/rm"; "-f"; file|]
       in
       result
     with Unix.Unix_error (Unix.ENOENT, _, _) ->
+      let () = global_status.Progress.failed <- global_status.Progress.failed + 1 in
+      let () = Progress.print global_status in
       Failed host
   in
   reports := partial_report :: !reports;
@@ -204,6 +191,8 @@ let main () =
       | [] -> raise Not_found
       | _ ->
         let hosts = List.map (fun a -> ("", a), (None : string option)) hosts in
+        let () = global_status.Progress.total <- (List.length hosts) in
+        let () = Progress.print global_status in
         (* Write tmp_cluster_name *)
         let () = Utils.with_out_file tmp_cluster_name (fun fd -> output_value fd cluster) in
         (* Launch tests *)
@@ -225,18 +214,20 @@ let main () =
             (function Done _ -> assert false | Failed v -> v)
             bad_hosts
         in
-        let _ =
-          let failed = Network.fold_hosts failed_reports in
-          Printf.eprintf "E: Bad hosts %s\n%!" (Network.string_of_hosts failed)
-        in
         let report =
           match good_reports with
-          | [] -> raise Exit
+          | [] -> print_newline (); raise Exit
           | [a] -> a
           | a::l -> List.fold_left Report.merge a l
         in
         (* Print report *)
-        Report.print report
+        let () = Report.print report in
+        let () =
+          if failed_reports <> [] then
+            let failed = Network.fold_hosts failed_reports in
+            Printf.eprintf "E: Bad hosts %s\n%!" (Network.string_of_hosts failed)
+        in
+        ()
       end
     with
     | Not_found ->

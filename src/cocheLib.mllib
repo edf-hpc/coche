@@ -10,3 +10,4 @@ lib/Flags
 lib/Subcommand
 lib/Query
 lib/Report
+lib/Progress
