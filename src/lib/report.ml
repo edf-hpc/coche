@@ -394,7 +394,10 @@ let print_element fmt p name elm =
 
   let _ =
     if List.length elm.M_info.good > 0 then
-      Format.fprintf fmt "@[<hv 2>\027[1;32mGood:@ \027[0;32m%s\027[0m@]" (fold_hosts elm.M_info.good)
+      begin
+        Format.fprintf fmt "@[<hv 2>\027[1;32mGood:@ \027[0;32m%s\027[0m@]" (fold_hosts elm.M_info.good);
+        if List.length elm.M_info.bad > 0 then Format.fprintf fmt "@;"
+      end
   in
   let _ =
     if List.length elm.M_info.bad > 0 then
