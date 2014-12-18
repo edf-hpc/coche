@@ -26,6 +26,7 @@ type response = Done of Report.t | Failed of string
 
 let xml_file = ref None
 let debug = ref false
+let dirty = ref false
 let worker = ref false
 let nproc = ref (Utils.processors_count ())
 let config = ref ""
@@ -46,6 +47,7 @@ let set_dtd f =
 let spec = [
   "-dtd", Arg.String set_dtd, " Set DTD file";
   "-debug", Arg.Unit set_debug, " Enable debug mode";
+  "-dirty", Arg.Set dirty, " Enable dirty mode";
   "-nproc", Arg.Set_int nproc, " Specify how many cores to use";
   "-worker", Arg.Set worker, " (internal usage only)";
   "-cluster", Arg.Set_string tmp_cluster_file, " (internal usage only)";
@@ -114,6 +116,7 @@ let get_remote_file (password, host) file1 file2 =
 let launch_worker (password, host) =
   let flags = [|tmp_binary_name; "check"; "-worker"|] in
   let flags = if !debug then Array.append flags [|"-debug"|] else flags in
+  let flags = if !dirty then Array.append flags [|"-dirty"|] else flags in
   let flags = Array.append flags [|"-cluster"; tmp_cluster_name ^ "." ^ host|] in
   let _ =
     try begin
@@ -138,7 +141,7 @@ let f_worker (password, host) =
   get_remote_file (password, host)
     (tmp_cluster_name ^ "." ^ host ^ ".report")
     (report_filename host);
-  if not !debug then
+  if not !dirty then
     ignore (Terminal.ssh host password [|"/bin/rm"; "-f";
                                          cluster_file;
                                          tmp_binary_name;
@@ -154,11 +157,11 @@ let master ((password, host), dest) _ =
           raise (Unix.Unix_error (Unix.ENOENT, "stat", file))
         else
           let report : Report.t = Utils.with_in_file file input_value in
-          let () = if not !debug then Unix.unlink file in
+          let () = if not !dirty then Unix.unlink file in
           Done report
       in
       let () =
-        if not !debug then
+        if not !dirty then
           ignore (Terminal.ssh host password [|"/bin/rm"; "-f"; file|])
       in
       result
@@ -205,7 +208,7 @@ let main () =
         let () = Utils.with_out_file tmp_cluster_name (fun fd -> output_value fd cluster) in
         (* Launch tests *)
         let () = compute ~worker:f_worker ~master hosts in
-        let () = if not !debug then Unix.unlink tmp_cluster_name in
+        let () = if not !dirty then Unix.unlink tmp_cluster_name in
         (* Merge reports *)
         let good_reports, bad_hosts =
           List.partition
