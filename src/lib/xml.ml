@@ -581,6 +581,6 @@ let read file =
     let config = read_cluster input in
     let () = close_in ic in
     config
-  with _ ->
+  with e ->
     close_in ic;
-    raise (Error_while_reading_file file)
+    Pervasives.raise e
