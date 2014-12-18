@@ -22,14 +22,14 @@ open Query
 open Functory.Cores
 module Arg = CocheArg
 
-type response = Done of Report.t | Failed of string
+type response = Done of Report.t | Failed of string * string
 
 let xml_file = ref None
 let debug = ref false
 let dirty = ref false
 let worker = ref false
 let config = ref ""
-let tmp_cluster_file = ref ""
+let worker_cluster_file = ref ""
 let master_pwd = ref ""
 let master_destination = ref ""
 let reports = ref []
@@ -53,58 +53,55 @@ let spec = [
   "-dirty", Arg.Set dirty, " Enable dirty mode";
   "-p", Arg.Int set_parallelism, " Specify parallelism level";
   "-worker", Arg.Set worker, " (internal usage only)";
-  "-cluster", Arg.Set_string tmp_cluster_file, " (internal usage only)";
+  "-cluster", Arg.Set_string worker_cluster_file, " (internal usage only)";
 ]
 
-
-let tmp_name suffix =
-  let name = Filename.temp_file "Coche_" suffix in
+let tmp_prefix =
+  let name = Filename.temp_file "Coche_" "" in
   Unix.unlink name;
   name
 
-let tmp_binary_name = tmp_name ".exe"
+let tmp_prefix () =
+  if !worker then
+    Filename.chop_extension (Filename.chop_extension !worker_cluster_file)
+  else
+    tmp_prefix
 
-let stable_tmp_name suffix =
-  let prefix =
-    if !worker then
-      Sys.argv.(0)
-    else
-      tmp_binary_name
-  in
-  (Filename.chop_extension prefix) ^ suffix
+(* Used on worker only *)
+let worker_local_report_file () = (tmp_prefix ()) ^ ".report"
 
-let tmp_report_name = stable_tmp_name ".report"
-let tmp_cluster_name = stable_tmp_name ".cluster"
+(* Used on master only *)
+let tmp_binary_name = (tmp_prefix ()) ^ ".exe"
+let tmp_cluster_file = (tmp_prefix ()) ^ ".cluster"
+let tmp_host_report_file host = (worker_local_report_file ()) ^ "." ^ host
+let remote_cluster_file host = tmp_cluster_file ^ "." ^ host
 
-let report_filename host =
-  Printf.sprintf "%s_%s" tmp_report_name host
-
-let send_file (password, host) file1 file2 =
+let send_file (password, host) source destination =
   let _ =
     Terminal.scp
       host
       password
-      [| file1 |]
-      (Printf.sprintf "%s:%s" host file2)
+      [| source |]
+      (Printf.sprintf "%s:%s" host destination)
   in ()
 
-let send_coche (password, host) file2 =
-  send_file (password, host) Sys.argv.(0) file2
+let send_coche (password, host) remote_name =
+  send_file (password, host) Sys.argv.(0) remote_name
 
-let get_remote_file (password, host) file1 file2 =
+let get_remote_file (password, host) remote_file local_destination =
   let _ =
     Terminal.scp
       host
       password
-      [|(Printf.sprintf "%s:%s" host file1)|]
-      file2
+      [|(Printf.sprintf "%s:%s" host remote_file)|]
+      local_destination
   in ()
 
-let launch_worker (password, host) =
-  let flags = [|tmp_binary_name; "check"; "-worker"|] in
+let launch_worker (password, host) binary =
+  let flags = [|binary; "check"; "-worker"|] in
   let flags = if !debug then Array.append flags [|"-debug"|] else flags in
   let flags = if !dirty then Array.append flags [|"-dirty"|] else flags in
-  let flags = Array.append flags [|"-cluster"; tmp_cluster_name ^ "." ^ host|] in
+  let flags = Array.append flags [| "-cluster"; remote_cluster_file host |] in
   let _ =
     Terminal.ssh
       host
@@ -116,59 +113,58 @@ let global_status = Progress.make_status 0 0 0
 
 let f_worker (password, host) =
   try
-    let cluster_file = tmp_cluster_name ^ "." ^ host in
+    let report_file = tmp_host_report_file host in
     send_coche (password, host) tmp_binary_name;
-    send_file (password, host) tmp_cluster_name cluster_file;
-    launch_worker (password, host);
+    send_file (password, host) tmp_cluster_file (remote_cluster_file host);
+    launch_worker (password, host) tmp_binary_name;
     get_remote_file (password, host)
-                    (tmp_cluster_name ^ "." ^ host ^ ".report")
-                    (report_filename host);
-    if not !dirty then
-      Terminal.ssh_no_errors host password [|"/bin/rm"; "-f";
-                                             cluster_file;
-                                             tmp_binary_name;
-                                             tmp_cluster_name ^ "." ^ host ^ ".report"
-                                            |]
-  with e ->
-    ()
+                    (worker_local_report_file ())
+                    report_file;
+    if (Unix.stat report_file).Unix.st_size = 0 then
+      Errors.raise (Errors.Empty_report host)
+    else
+      let report : Report.t = Utils.with_in_file report_file input_value in
+      let () = if not !dirty then Unix.unlink report_file in
+      Done report
+  with
+  | Errors.Error e ->
+     Failed (host, Errors.string_of_error e)
+  | Unix.Unix_error (e,_,m) ->
+     Failed (host, Printf.sprintf "%s (%s)" (Unix.error_message e) m)
+  | e ->
+     Failed (host, Printexc.to_string e)
 
-let master ((password, host), dest) _ =
-  let partial_report =
-    try
-      let file = report_filename host in
-      let result =
-        if (Unix.stat file).Unix.st_size = 0 then
-          raise (Unix.Unix_error (Unix.ENOENT, "stat", file))
-        else
-          let report : Report.t = Utils.with_in_file file input_value in
-          let () = if not !dirty then Unix.unlink file in
-          let () = global_status.Progress.finished <- global_status.Progress.finished + 1 in
-          let () = Progress.print global_status in
-          Done report
-      in
-      let () =
-        if not !dirty then
-          Terminal.ssh_no_errors host password [|"/bin/rm"; "-f"; file|]
-      in
-      result
-    with Unix.Unix_error (Unix.ENOENT, _, _) ->
-      let () = global_status.Progress.failed <- global_status.Progress.failed + 1 in
-      let () = Progress.print global_status in
-      Failed host
-  in
+let master ((password, host), _) partial_report =
+  begin
+    match partial_report with
+    | Done _ ->
+       global_status.Progress.finished <- global_status.Progress.finished + 1
+    | Failed (h, e) ->
+       (* Printf.printf "Failed host %s = %s\n%!" h e; *)
+       global_status.Progress.failed <- global_status.Progress.failed + 1
+  end;
+  Progress.print global_status;
+  if not !dirty then
+    Terminal.ssh_no_errors
+      host
+      password
+      [|"/bin/rm"; "-f";
+        (worker_local_report_file ());
+        remote_cluster_file host;
+        tmp_binary_name;
+       |];
   reports := partial_report :: !reports;
   []
 
 let main () =
   if !worker then
     begin
-      let my_hostname = FilePath.get_extension !tmp_cluster_file in
+      let my_hostname = FilePath.get_extension !worker_cluster_file in
       let () = Utils.set_hostname my_hostname in
-      let cluster = Utils.with_in_file !tmp_cluster_file input_value in
+      let cluster = Utils.with_in_file !worker_cluster_file input_value in
       let result = Query.run my_hostname cluster in
       let report = Report.make result in
-      let tmp_report_name = !tmp_cluster_file ^ ".report" in
-      Utils.with_out_file tmp_report_name (fun fd -> output_value fd report)
+      Utils.with_out_file (worker_local_report_file ()) (fun fd -> output_value fd report)
     end
   else
     (* Read XML file *)
@@ -195,10 +191,10 @@ let main () =
         let () = global_status.Progress.total <- (List.length hosts) in
         let () = Progress.print global_status in
         (* Write tmp_cluster_name *)
-        let () = Utils.with_out_file tmp_cluster_name (fun fd -> output_value fd cluster) in
+        let () = Utils.with_out_file tmp_cluster_file (fun fd -> output_value fd cluster) in
         (* Launch tests *)
         let () = compute ~worker:f_worker ~master hosts in
-        let () = if not !dirty then Unix.unlink tmp_cluster_name in
+        let () = if not !dirty then Unix.unlink tmp_cluster_file in
         (* Merge reports *)
         let good_reports, bad_hosts =
           List.partition
@@ -212,12 +208,13 @@ let main () =
         in
         let failed_reports =
           List.map
-            (function Done _ -> assert false | Failed v -> v)
+            (function Done _ -> assert false | Failed (v,e) -> (v,e))
             bad_hosts
         in
+        print_newline ();
         let report =
           match good_reports with
-          | [] -> print_newline (); raise Exit
+          | [] -> raise Exit
           | [a] -> a
           | a::l -> List.fold_left Report.merge a l
         in
@@ -225,8 +222,11 @@ let main () =
         let () = Report.print report in
         let () =
           if failed_reports <> [] then
-            let failed = Network.fold_hosts failed_reports in
-            Printf.eprintf "E: Bad hosts %s\n%!" (Network.string_of_hosts failed)
+            let failed_hosts = Network.fold_hosts (List.map fst failed_reports) in
+            Printf.eprintf "E: Bad hosts %s:\n" (Network.string_of_hosts failed_hosts);
+            List.iter
+              (fun (h, e) -> Printf.eprintf "  %s = %s\n" h e)
+              (List.sort Pervasives.compare failed_reports)
         in
         ()
       end

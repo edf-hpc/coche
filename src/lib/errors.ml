@@ -54,6 +54,7 @@ type error =
     | Unix of Unix.error
     | Cannot_merge_two_different_tags of string
     | Cannot_merge_two_different_reports of string
+    | Empty_report of string
 
 exception Error of error
 
@@ -137,6 +138,9 @@ let string_of_error = function
     sprintf "Cannot_merge_two_different_tags : %s " s
   | Cannot_merge_two_different_reports s ->
     sprintf "Cannot_merge_two_different_reports : %s " s
+  | Empty_report host ->
+    sprintf "Got an empty report from %s" host
+
 let raise e =
   raise (Error e)
 

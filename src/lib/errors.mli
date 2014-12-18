@@ -54,6 +54,7 @@ type error =
     | Unix of Unix.error
     | Cannot_merge_two_different_tags of string
     | Cannot_merge_two_different_reports of string
+    | Empty_report of string
 
 exception Error of error
 
