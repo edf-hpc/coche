@@ -68,12 +68,12 @@ let tmp_prefix () =
     tmp_prefix
 
 (* Used on worker only *)
-let worker_local_report_file () = (tmp_prefix ()) ^ ".report"
+let worker_local_report_file host = (tmp_prefix ()) ^ "." ^ host
 
 (* Used on master only *)
 let tmp_binary_name = (tmp_prefix ()) ^ ".exe"
 let tmp_cluster_file = (tmp_prefix ()) ^ ".cluster"
-let tmp_host_report_file host = (worker_local_report_file ()) ^ "." ^ host
+let tmp_host_report_file host = (worker_local_report_file host) ^ ".report"
 let remote_cluster_file host = tmp_cluster_file ^ "." ^ host
 
 let send_file (password, host) source destination =
@@ -118,7 +118,7 @@ let f_worker (password, host) =
     send_file (password, host) tmp_cluster_file (remote_cluster_file host);
     launch_worker (password, host) tmp_binary_name;
     get_remote_file (password, host)
-                    (worker_local_report_file ())
+                    (worker_local_report_file host)
                     report_file;
     if (Unix.stat report_file).Unix.st_size = 0 then
       Errors.raise (Errors.Empty_report host)
@@ -149,7 +149,7 @@ let master ((password, host), _) partial_report =
       host
       password
       [|"/bin/rm"; "-f";
-        (worker_local_report_file ());
+        (worker_local_report_file host);
         remote_cluster_file host;
         tmp_binary_name;
        |];
@@ -164,7 +164,7 @@ let main () =
       let cluster = Utils.with_in_file !worker_cluster_file input_value in
       let result = Query.run my_hostname cluster in
       let report = Report.make result in
-      Utils.with_out_file (worker_local_report_file ()) (fun fd -> output_value fd report)
+      Utils.with_out_file (worker_local_report_file my_hostname) (fun fd -> output_value fd report)
     end
   else
     (* Read XML file *)
