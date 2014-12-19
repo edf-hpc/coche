@@ -131,16 +131,12 @@ let run env host password cmd args input =
     assert false (* create_session nevers returns None *)
 
 let common_args host =
-  let env = [|
-    Printf.sprintf "%s=%s" "SSH_AGENT_PID" (Unix.getenv "SSH_AGENT_PID");
-    Printf.sprintf "%s=%s" "SSH_AUTH_SOCK" (Unix.getenv "SSH_AUTH_SOCK");
-	    |] in
   [| "-e none";
      "-o ConnectTimeout=1";
      "-o ConnectionAttempts=1";
      "-q";
      host;
-  |], env
+  |], [| |]
 
 let ssh host password command =
   let common_args, env = common_args host in
