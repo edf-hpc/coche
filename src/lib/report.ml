@@ -386,11 +386,14 @@ let merge cluster1 cluster2 =
 (*
  * Printing functions
  *)
+let fold_hosts h =
+  try
+    Network.string_of_hosts (Network.fold_hosts h)
+  with _ ->
+    read_process (Printf.sprintf "nodeset -f %s" (String.concat "," h))
 
 let print_element fmt p name elm =
   Format.fprintf fmt "@[<v 2>\027[1;34mTest %s [\027[0;34m%a\027[1;34m]\027[0m@ " name p elm.M_info.value;
-
-  let fold_hosts h = Network.string_of_hosts (Network.fold_hosts h) in
 
   let _ =
     if List.length elm.M_info.good > 0 then

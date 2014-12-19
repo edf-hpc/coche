@@ -20,6 +20,8 @@
 
 type t
 
+val fold_hosts : string list -> string
+
 val make : Ast.Result.t -> t
 val merge : t -> t -> t
 val print : t -> unit
