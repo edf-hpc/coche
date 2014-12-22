@@ -54,6 +54,8 @@ let spec = [
   "-debug", Arg.Unit set_debug, " Enable debug mode";
   "-dirty", Arg.Set dirty, " Enable dirty mode";
   "-p", Arg.Int set_parallelism, " Specify parallelism level";
+  "--use-ssh-agent", Arg.Set Flags.use_ssh_agent, " Use SSH agent (when available)";
+  "-s", Arg.Set Flags.use_ssh_agent, " Use SSH agent (when available)";
   "-worker", Arg.Set worker, " (internal usage only)";
   "-cluster", Arg.Set_string worker_cluster_file, " (internal usage only)";
 ]
