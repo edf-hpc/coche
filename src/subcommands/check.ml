@@ -43,6 +43,8 @@ let set_dtd f =
   then Xml.dtd_file := f
   else raise (Arg.Bad "Specified DTD file doesn't exist")
 
+let () = Functory.Cores.set_number_of_cores (Utils.processors_count ())
+
 let set_parallelism p =
   if p > 0 && p <= (Utils.processors_count ()) then
     set_number_of_cores p
