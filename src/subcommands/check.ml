@@ -28,10 +28,7 @@ let xml_file = ref None
 let debug = ref false
 let dirty = ref false
 let worker = ref false
-let config = ref ""
 let worker_cluster_file = ref ""
-let master_pwd = ref ""
-let master_destination = ref ""
 let reports = ref []
 let target_class = ref "default"
 
