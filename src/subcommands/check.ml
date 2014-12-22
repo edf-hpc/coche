@@ -215,14 +215,13 @@ let main () =
             bad_hosts
         in
         print_newline ();
-        let report =
-          match good_reports with
-          | [] -> raise Exit
-          | [a] -> a
-          | a::l -> List.fold_left Report.merge a l
-        in
         (* Print report *)
-        let () = Report.print report in
+        let () =
+          match good_reports with
+          | [] -> ()
+          | [a] -> Report.print a
+          | a::l -> Report.print (List.fold_left Report.merge a l)
+        in
         let () =
           if failed_reports <> [] then
             let failed_hosts = Report.fold_hosts (List.map fst failed_reports) in
