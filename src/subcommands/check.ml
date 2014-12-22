@@ -33,7 +33,7 @@ let worker_cluster_file = ref ""
 let master_pwd = ref ""
 let master_destination = ref ""
 let reports = ref []
-let target_class = ref ""
+let target_class = ref "default"
 
 let set_debug () =
   debug := true;
@@ -183,17 +183,14 @@ let main () =
         Errors.exit Errors.XML_file_not_specified
     in
     try
-      let class_name, class_predicate =
-        if !target_class = "" then
-          "default", fun c -> c.Ast.c_type = "default"
-        else
-          !target_class, fun c -> c.Ast.c_type = !target_class || c.Ast.c_name = !target_class
+      let class_predicate c =
+        c.Ast.c_type = !target_class || c.Ast.c_name = !target_class
       in
       let netclass =
         try
           List.find class_predicate cluster.Ast.Dtd.classes
         with Not_found as e ->
-          Errors.warn (Errors.Class_not_found class_name);
+          Errors.warn (Errors.Class_not_found !target_class);
           raise e
       in
       let hosts = Network.expand_hosts (netclass.Ast.c_default.Ast.a_hosts) in
