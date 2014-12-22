@@ -55,6 +55,7 @@ type error =
     | Cannot_merge_two_different_tags of string
     | Cannot_merge_two_different_reports of string
     | Empty_report of string
+    | Invalid_report of string * string
 
 exception Error of error
 

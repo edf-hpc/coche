@@ -32,6 +32,8 @@ let worker_cluster_file = ref ""
 let reports = ref []
 let target_class = ref "default"
 
+let coche_mark = "COCHE_MARK"
+
 let set_debug () =
   debug := true;
   Functory.Control.set_debug true
@@ -70,26 +72,19 @@ let tmp_prefix () =
   else
     tmp_prefix
 
-(* Used on worker only *)
-let worker_local_report_file host = (tmp_prefix ()) ^ "." ^ host
-
 (* Used on master only *)
 let tmp_binary_name = (tmp_prefix ()) ^ ".exe"
 let tmp_cluster_file = (tmp_prefix ()) ^ ".cluster"
-let tmp_host_report_file host = (worker_local_report_file host) ^ ".report"
 let remote_cluster_file host = tmp_cluster_file ^ "." ^ host
 
-let send_file (password, host) source destination =
+let send_files (password, host) sources destination =
   let _ =
     Terminal.scp
       host
       password
-      [| source |]
+      sources
       (Printf.sprintf "%s:%s" host destination)
   in ()
-
-let send_coche (password, host) remote_name =
-  send_file (password, host) Sys.argv.(0) remote_name
 
 let get_remote_file (password, host) remote_file local_destination =
   let _ =
@@ -105,30 +100,26 @@ let launch_worker (password, host) binary =
   let flags = if !debug then Array.append flags [|"-debug"|] else flags in
   let flags = if !dirty then Array.append flags [|"-dirty"|] else flags in
   let flags = Array.append flags [| "-cluster"; remote_cluster_file host |] in
-  let _ =
-    Terminal.ssh
-      host
-      password
-      flags
-  in ()
+  Terminal.ssh
+    host
+    password
+    flags
 
 let global_status = Progress.make_status 0 0 0
-
 let f_worker (password, host) =
   try
-    let report_file = tmp_host_report_file host in
-    send_coche (password, host) tmp_binary_name;
-    send_file (password, host) tmp_cluster_file (remote_cluster_file host);
-    launch_worker (password, host) tmp_binary_name;
-    get_remote_file (password, host)
-                    (worker_local_report_file host)
-                    report_file;
-    if (Unix.stat report_file).Unix.st_size = 0 then
-      Errors.raise (Errors.Empty_report host)
-    else
-      let report : Report.t = Utils.with_in_file report_file input_value in
-      let () = if not !dirty then Unix.unlink report_file in
-      Done report
+    let remote_cluster_file = remote_cluster_file host in
+    let _ = Sys.command(Printf.sprintf "ln -s %s %s" tmp_cluster_file remote_cluster_file) in
+    send_files (password, host) [| tmp_binary_name; remote_cluster_file |] "/tmp";
+    let ssh_output = launch_worker (password, host) tmp_binary_name in
+    begin
+      try
+        let _, report_raw = ExtString.String.split ssh_output coche_mark in
+        let report : Report.t = Marshal.from_string report_raw 0 in
+        Done report
+      with _ ->
+        Errors.raise (Errors.Invalid_report (host, ssh_output))
+    end
   with
   | Errors.Error e ->
      Failed (host, Errors.string_of_error e)
@@ -143,16 +134,16 @@ let master ((password, host), _) partial_report =
     | Done _ ->
        Progress.update ~finished:1 global_status
     | Failed (h, e) ->
-       (* Printf.printf "Failed host %s = %s\n%!" h e; *)
        Progress.update ~failed:1 global_status
   end;
+  let remote_cluster_file = remote_cluster_file host in
+  Unix.unlink remote_cluster_file;
   if not !dirty then
     Terminal.ssh_no_errors
       host
       password
       [|"/bin/rm"; "-f";
-        (worker_local_report_file host);
-        remote_cluster_file host;
+        remote_cluster_file;
         tmp_binary_name;
        |];
   reports := partial_report :: !reports;
@@ -166,7 +157,8 @@ let main () =
       let cluster = Utils.with_in_file !worker_cluster_file input_value in
       let result = Query.run my_hostname cluster in
       let report = Report.make result in
-      Utils.with_out_file (worker_local_report_file my_hostname) (fun fd -> output_value fd report)
+      print_string coche_mark;
+      output_value stdout report
     end
   else
     (* Read XML file *)
@@ -200,8 +192,10 @@ let main () =
         (* Write tmp_cluster_name *)
         let () = Utils.with_out_file tmp_cluster_file (fun fd -> output_value fd cluster) in
         (* Launch tests *)
+        let _ = FileUtil.cp ~follow:FileUtil.Follow [Sys.argv.(0)] tmp_binary_name in
+        let _ = Unix.chmod tmp_binary_name 0o750 in
         let () = compute ~worker:f_worker ~master hosts in
-        let () = if not !dirty then Unix.unlink tmp_cluster_file in
+        let () = if not !dirty then FileUtil.rm [tmp_cluster_file; tmp_binary_name] in
         (* Merge reports *)
         let good_reports, bad_hosts =
           List.partition
