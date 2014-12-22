@@ -183,9 +183,13 @@ let main () =
     let () = Progress.print global_status in
     try
       let netclass =
-        List.find
-          (fun c -> c.Ast.c_type = "default")
-          cluster.Ast.Dtd.classes
+        try
+          List.find
+            (fun c -> c.Ast.c_type = "default")
+            cluster.Ast.Dtd.classes
+        with Not_found as e ->
+          Errors.warn (Errors.Class_not_found "default");
+          raise e
       in
       let hosts = Network.expand_hosts (netclass.Ast.c_default.Ast.a_hosts) in
       begin match hosts with
