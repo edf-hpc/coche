@@ -52,10 +52,7 @@ let make_status finished failed total =
   { finished; failed; total }
 
 let update ?finished:(d_finished=0) ?failed:(d_failed=0) st =
-  let new_st =
-    { st with
-      finished = st.finished + d_finished;
-      failed   = st.failed   + d_failed;
-    }
-  in print new_st
+  st.finished <- st.finished + d_finished;
+  st.failed <- st.failed + d_failed;
+  print st
 

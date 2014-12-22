@@ -140,12 +140,11 @@ let master ((password, host), _) partial_report =
   begin
     match partial_report with
     | Done _ ->
-       global_status.Progress.finished <- global_status.Progress.finished + 1
+       Progress.update ~finished:1 global_status
     | Failed (h, e) ->
        (* Printf.printf "Failed host %s = %s\n%!" h e; *)
-       global_status.Progress.failed <- global_status.Progress.failed + 1
+       Progress.update ~failed:1 global_status
   end;
-  Progress.print global_status;
   if not !dirty then
     Terminal.ssh_no_errors
       host
