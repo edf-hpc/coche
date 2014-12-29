@@ -56,7 +56,12 @@ let string_of_mutlplier m =
 
 let make n =
   try
-    { size = floor (float_of_string n); multiplier = 1. }
+    let freq =
+      if ExtString.String.strip n = ""
+      then 0.
+      else float_of_string n
+    in
+    { size = floor freq; multiplier = 1. }
   with _ ->
     if Pcre.pmatch ~rex n then
       let substrings = Pcre.extract ~rex n in
