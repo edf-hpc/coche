@@ -225,7 +225,7 @@ let main () =
             let failed_hosts = Report.fold_hosts (List.map fst failed_reports) in
             Printf.eprintf "E: %d unreachable hosts (%s):\n" (List.length failed_reports) failed_hosts;
             List.iter
-              (fun (h, e) -> Printf.eprintf "  %s = %s\n" h e)
+              (fun (h, e) -> Printf.eprintf "  %s = %s\n" h (ExtString.String.strip e))
               (List.sort Pervasives.compare failed_reports)
         in
         ()
