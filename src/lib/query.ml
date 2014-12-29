@@ -345,7 +345,7 @@ let q_memory memory =
                           else fail (mem_rslt, memory)
 
 let q_cpu cpu =
-  let maxf  = read_process "lscpu | grep 'CPU max MHz' | cut -d: -f2 | sed 's/,/./'" in
+  let maxf  = read_process "lscpu | sed -n 's/CPU MHz:[ ]*//p'" in
   let maxf = (Units.Freq.make((ExtString.String.strip maxf)^"MHz")) in
   let core = read_process "lscpu | sed -n 's@Core(s) per socket:[ ]*@@p'" in
   let core = int_of_string (ExtString.String.strip core) in
