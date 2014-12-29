@@ -115,6 +115,7 @@ let f_worker (password, host) =
     begin
       try
         let _, report_raw = ExtString.String.split ssh_output coche_mark in
+        let report_raw = Base64.str_decode report_raw in
         let report : Report.t = Marshal.from_string report_raw 0 in
         Done report
       with _ ->
@@ -158,7 +159,7 @@ let main () =
       let result = Query.run my_hostname cluster in
       let report = Report.make result in
       print_string coche_mark;
-      output_value stdout report
+      print_string (Base64.str_encode (Marshal.to_string report []))
     end
   else
     (* Read XML file *)
