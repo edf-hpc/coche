@@ -145,11 +145,11 @@ let q_mount mount =
                }
   in
   try
-    let elem = List.find (fun s -> contains s mount.m_name) output_lines in
-    let size = read_process (__ "df -h -P 2>/dev/null | sed -n 's@^%s *\\([^ ]*\\).*$@\\1@p'" mount.m_device) in
+    let elem = List.find (fun s -> contains s mount.m_device) output_lines in
+    let size = read_process (__ "df -h -P 2>/dev/null | sed -n 's@^%s *\\([^ ]*\\).*$@\\1@p' | sed 's/,/./g'" mount.m_device) in
     let size = Units.Size.make (let s = ExtString.String.strip size in if s = "" then "0" else s^"B") in
-    begin match ExtString.String.nsplit " " elem with
-          | _ :: mount_point :: mount_fstype :: mount_options :: [] ->
+    begin match ExtString.String.nsplit elem " " with
+          | _ :: mount_point :: "type" :: mount_fstype :: mount_options :: [] ->
              if mount.m_options = Some mount_options (* FIXME: Options can be in a different order *)
                 && mount.m_fstype = Some mount_fstype
                 && mount.m_mountpoint = mount_point
@@ -161,7 +161,7 @@ let q_mount mount =
                                       m_size = Some size;
                         }
                        , mount)
-          | _ :: mount_point :: mount_fstype :: [] ->
+          | _ :: mount_point :: "type" :: mount_fstype :: [] ->
              if mount.m_options = None
                 && mount.m_fstype = Some mount_fstype
                 && mount.m_mountpoint = mount_point
