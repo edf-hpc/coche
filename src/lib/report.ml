@@ -58,9 +58,9 @@ module P = struct
     | Some o -> Some (f o)
     | None -> None
 
-  let option p prefix fmt o =
+  let option ?(suffix="") p prefix fmt o =
     match o with
-    | Some o -> Format.fprintf fmt "%s%a" prefix p o
+    | Some o -> Format.fprintf fmt "%s%a%s" prefix p o suffix
     | None -> ()
 
   let digest fmt d =
@@ -79,7 +79,7 @@ module P = struct
     in Format.pp_print_string fmt desc
 
   let file fmt f =
-    Format.fprintf fmt "@[<hv 2>%s: %a %a %a (%a) %a@]@;"
+    Format.fprintf fmt "@[<hv 2>%s: %a %a %a (%a) %a@]"
                    f.Ast.Base.f_name
                    (option Format.pp_print_int "") f.Ast.Base.f_perms
                    (option Format.pp_print_string "") f.Ast.Base.f_owner
@@ -124,13 +124,13 @@ module P = struct
     Format.fprintf fmt "%s\t%s\t%s" q_type q_target (Units.Size.to_string q.Ast.Base.q_size)
 
   let mount fmt m =
-    Format.fprintf fmt "@[<hv 2>%s: %a %a %s on %s (%a)@]@;"
+    Format.fprintf fmt "@[<hv 2>%s:%a%a %s on %s%a@]"
                    m.Ast.Base.m_name
-                   (option Format.pp_print_string "-o ") m.Ast.Base.m_options
-                   (option Format.pp_print_string "-t ") m.Ast.Base.m_fstype
-                   m.Ast.Base.m_mountpoint
+                   (option Format.pp_print_string " -o ") m.Ast.Base.m_options
+                   (option Format.pp_print_string " -t ") m.Ast.Base.m_fstype
                    m.Ast.Base.m_device
-                   (option Format.pp_print_string "Size: ") (option_map Units.Size.to_string m.Ast.Base.m_size);
+                   m.Ast.Base.m_mountpoint
+                   (option Format.pp_print_string ~suffix:")" " (") (option_map Units.Size.to_string m.Ast.Base.m_size);
     match m.Ast.Base.m_quota with
     | [] -> ()
     | list ->
@@ -405,17 +405,16 @@ let print_element fmt p name elm =
   let _ =
     if List.length elm.M_info.bad > 0 then
       begin
-        Format.fprintf fmt "@[<hv 2>\027[1;31mBad:\027[0;31m@ ";
-        Format.fprintf fmt "@[<hv 2>";
+        Format.fprintf fmt "@[<hv 2>\027[1;31mBad:\027[0;31m";
         List.iter
-	  (fun (a, elm) ->
+	  (fun (reason, elm) ->
              Format.fprintf
-               fmt "%s [%a]@;"
+               fmt "@;@[<hv 2>- [%a] on %s@]"
+               p reason
                (fold_hosts elm)
-               p a
           )
           elm.M_info.bad;
-        Format.fprintf fmt "@]@]\027[0m";
+        Format.fprintf fmt "@]\027[0m";
       end
   in
   Format.fprintf fmt "@]@;<2 0>"
