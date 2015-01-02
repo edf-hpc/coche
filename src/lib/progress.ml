@@ -49,7 +49,7 @@ let print st =
                 st.total
 
 let make_status finished failed total =
-  { finished; failed; total }
+  { finished = finished; failed = failed; total = total }
 
 let update ?finished:(d_finished=0) ?failed:(d_failed=0) st =
   st.finished <- st.finished + d_finished;
