@@ -44,8 +44,6 @@ let run_or_skip run f t =
   else
     skip t
 
-module SMap = Map.Make(String)
-
 let __ = Printf.sprintf
 
 (*

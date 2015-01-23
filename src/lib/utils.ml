@@ -20,6 +20,9 @@
 
 let ($) f g = g f
 
+module SMap = Map.Make(String)
+module SSet = Set.Make(String)
+
 external processors_count : unit -> int = "nb_processors"
 
 let read_process command =

@@ -24,7 +24,7 @@ open Ast
 module M_info = struct
     type 'a t = {
       value: 'a;
-      good: string list;
+      good: SSet.t;
       bad: ('a * string list) list
     }
     type file_info = Digest.t
@@ -163,17 +163,17 @@ type t = M.t
 let r_result = function
   | Ast.Result_info.Ok elm ->
     { M_info.value = elm;
-      M_info.good = (Utils.get_hostname ())::[];
+      M_info.good = SSet.singleton (Utils.get_hostname ());
       M_info.bad = []
     }
   | Ast.Result_info.Fail (elm, good) ->
     { M_info.value = good;
-      M_info.good = [];
+      M_info.good = SSet.empty;
       M_info.bad = (elm, (Utils.get_hostname ())::[])::[]
     }
   | Ast.Result_info.Skip elm ->
     { M_info.value = elm;
-      M_info.good = [];
+      M_info.good = SSet.empty;
       M_info.bad = []
     }
 
@@ -260,15 +260,14 @@ let make cluster =
     cluster
 
 let merge_report_info r1 r2 =
-  let good = r1.M_info.good @ r2.M_info.good in
+  let good = SSet.union r1.M_info.good r2.M_info.good in
   let bad =
     List.fold_left
       (fun acc (resultat, hosts) ->
 	try
 	  let h = List.assoc resultat acc in
           let host_result = hosts @ h in
-	  (resultat, host_result) :: (List.remove_assoc resultat acc)
-
+          (resultat, host_result) :: (List.remove_assoc resultat acc)
 	with Not_found ->
 	  (resultat, hosts) :: acc
       )
@@ -396,9 +395,12 @@ let print_element fmt p name elm =
   Format.fprintf fmt "@[<v 2>\027[1;34mTest %s [\027[0;34m%a\027[1;34m]\027[0m@ " name p elm.M_info.value;
 
   let _ =
-    if List.length elm.M_info.good > 0 then
+    if not (SSet.is_empty elm.M_info.good) then
       begin
-        Format.fprintf fmt "@[<hv 2>\027[1;32mGood:@ \027[0;32m%s\027[0m@]" (fold_hosts elm.M_info.good);
+        Format.fprintf
+          fmt
+          "@[<hv 2>\027[1;32mGood:@ \027[0;32m%s\027[0m@]"
+          (fold_hosts (SSet.elements elm.M_info.good));
         if List.length elm.M_info.bad > 0 then Format.fprintf fmt "@;"
       end
   in
