@@ -224,7 +224,10 @@ let main () =
         let () =
           if failed_reports <> [] then
             let failed_hosts = Report.fold_hosts (List.map fst failed_reports) in
-            Printf.eprintf "E: %d unreachable hosts (%s):\n" (List.length failed_reports) failed_hosts;
+            Printf.eprintf
+              "E: %d failed hosts (%s):\n"
+              (List.length failed_reports)
+              failed_hosts;
             List.iter
               (fun (h, e) -> Printf.eprintf "  %s = %s\n" h (ExtString.String.strip e))
               (List.sort Pervasives.compare failed_reports)
