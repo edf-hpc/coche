@@ -25,7 +25,7 @@ module M_info = struct
     type 'a t = {
       value: 'a;
       good: SSet.t;
-      bad: ('a * string list) list
+      bad: ('a * SSet.t) list
     }
     type file_info = Digest.t
     let compare = Pervasives.compare
@@ -169,7 +169,7 @@ let r_result = function
   | Ast.Result_info.Fail (elm, good) ->
     { M_info.value = good;
       M_info.good = SSet.empty;
-      M_info.bad = (elm, (Utils.get_hostname ())::[])::[]
+      M_info.bad = [elm, SSet.singleton (Utils.get_hostname ())]
     }
   | Ast.Result_info.Skip elm ->
     { M_info.value = elm;
@@ -266,7 +266,7 @@ let merge_report_info r1 r2 =
       (fun acc (resultat, hosts) ->
 	try
 	  let h = List.assoc resultat acc in
-          let host_result = hosts @ h in
+          let host_result = SSet.union hosts h in
           (resultat, host_result) :: (List.remove_assoc resultat acc)
 	with Not_found ->
 	  (resultat, hosts) :: acc
@@ -413,7 +413,7 @@ let print_element fmt p name elm =
              Format.fprintf
                fmt "@;@[<hv 2>- [%a] on %s@]"
                p reason
-               (fold_hosts elm)
+               (fold_hosts (SSet.elements elm))
           )
           elm.M_info.bad;
         Format.fprintf fmt "@]\027[0m";
