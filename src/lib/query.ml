@@ -313,10 +313,12 @@ let q_netconfig in_classes netconfig =
 
 let q_baseboard baseboard =
   let vendor =
-    Std.input_file "/sys/devices/virtual/dmi/id/board_vendor"
+    Std.input_file "/sys/devices/virtual/dmi/id/board_vendor" $
+      ExtString.String.strip
   in
   let name =
-    Std.input_file "/sys/devices/virtual/dmi/id/board_name"
+    Std.input_file "/sys/devices/virtual/dmi/id/board_name" $
+      ExtString.String.strip
   in
   if baseboard.vendor = vendor
      && (baseboard.name = None || baseboard.name = Some name)
