@@ -311,6 +311,20 @@ let q_netconfig in_classes netconfig =
  * Hardware section
  *)
 
+let q_baseboard baseboard =
+  let vendor =
+    Std.input_file "/sys/devices/virtual/dmi/id/board_vendor"
+  in
+  let name =
+    Std.input_file "/sys/devices/virtual/dmi/id/board_name"
+  in
+  if baseboard.vendor = vendor
+     && (baseboard.name = None || baseboard.name = Some name)
+  then
+    ok baseboard
+  else
+    fail ({vendor = vendor; name = Some name}, baseboard)
+
 let q_disk disk =
   let output = read_process (__ "lsblk -n -d %s 2>/dev/null | awk '{ print $4 }' | sed 's@,@.@'" disk.device) in
   let output = output ^ "B" in
@@ -384,9 +398,10 @@ let q_cpu cpu =
 
 let q_hardware_desc run hardware_desc =
   match hardware_desc with
-    |Dtd.Memory memory -> Memory (run_or_skip run q_memory memory)
-    |Dtd.Disk disk -> Disk (run_or_skip run q_disk disk)
-    |Dtd.Cpu cpu -> Cpu (run_or_skip run q_cpu cpu)
+  | Dtd.Baseboard baseboard -> Baseboard (run_or_skip run q_baseboard baseboard)
+  | Dtd.Memory memory -> Memory (run_or_skip run q_memory memory)
+  | Dtd.Disk disk -> Disk (run_or_skip run q_disk disk)
+  | Dtd.Cpu cpu -> Cpu (run_or_skip run q_cpu cpu)
 
 let q_hardware in_classes hardware =
   let should_run = in_classes hardware.Dtd.h_classes in

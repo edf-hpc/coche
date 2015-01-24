@@ -296,6 +296,12 @@ let rec read_devices classes devices input =
 
 let rec read_hardware hard input =
   match Xmlm.peek input with
+    | `El_start ((_, "baseboard"), attrs) ->
+        let attr_values = read_element_option "baseboard" ["vendor"; "name"] input in
+        let hard = Baseboard { vendor = Option.get (List.nth attr_values 0);
+                               name = List.nth attr_values 1 } :: hard
+        in
+        read_hardware hard input
     | `El_start ((_, "memory"), attrs) ->
         let attr_values = read_element_option "memory" ["swap"; "ram"; "ram-speed"; "ram-modules"] input in
         let hard = Memory { swap = Option.map Units.Size.make (List.nth attr_values 0);

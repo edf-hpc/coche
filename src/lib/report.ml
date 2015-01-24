@@ -118,6 +118,12 @@ module P = struct
     let () = if space && Option.is_some m.Ast.Base.swap then Format.fprintf fmt " " in
     option Format.pp_print_string "Swap:" fmt (option_map Units.Size.to_string m.Ast.Base.swap)
 
+  let baseboard fmt b =
+    Format.fprintf
+      fmt "%s%a"
+      b.Ast.Base.vendor
+      (option Format.pp_print_string " ") b.Ast.Base.name
+
   let disk fmt d =
     Format.fprintf
       fmt "%s%a"
@@ -223,9 +229,10 @@ let r_system system =
 
 let r_hardware_desc hardware_desc =
   match hardware_desc with
-    | Result.Memory memory -> M.Memory (r_result memory)
-    | Result.Disk disk -> M.Disk (r_result disk)
-    | Result.Cpu cpu -> M.Cpu (r_result cpu)
+  | Result.Baseboard baseboard -> M.Baseboard (r_result baseboard)
+  | Result.Memory memory -> M.Memory (r_result memory)
+  | Result.Disk disk -> M.Disk (r_result disk)
+  | Result.Cpu cpu -> M.Cpu (r_result cpu)
 
 let r_hardware hardware =
   let name = hardware.Result.h_name in
@@ -327,6 +334,8 @@ let mr_system system1 system2 =
 
 let mr_hardware_desc hardware_desc1 hardware_desc2 =
   match hardware_desc1 ,hardware_desc2  with
+    | M.Baseboard baseboard1, M.Baseboard baseboard2 ->
+      M.Baseboard (merge_report_info baseboard1 baseboard2)
     | M.Memory memory1, M.Memory memory2 ->
       M.Memory (merge_report_info memory1 memory2)
     | M.Disk disk1, M.Disk disk2 ->
@@ -453,9 +462,10 @@ let print_system fmt system =
 
 let print_hardware_desc fmt hardware_desc =
   match hardware_desc with
-    | M.Memory memory -> print_element fmt P.memory "Memory" memory
-    | M.Disk disk -> print_element fmt P.disk "Disk" disk
-    | M.Cpu cpu -> print_element fmt P.cpu "CPU" cpu
+  | M.Baseboard baseboard -> print_element fmt P.baseboard "Baseboard" baseboard
+  | M.Memory memory -> print_element fmt P.memory "Memory" memory
+  | M.Disk disk -> print_element fmt P.disk "Disk" disk
+  | M.Cpu cpu -> print_element fmt P.cpu "CPU" cpu
 
 let print_hardware fmt hardware =
   Format.fprintf fmt "@[<hv 2>\027[1;33mHardware tests (%s):\027[0m@;" hardware.M.h_name;

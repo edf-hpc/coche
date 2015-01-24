@@ -74,6 +74,11 @@ module Base = struct
     ram_modules: int option;
   }
 
+  and baseboard = {
+    vendor: string;
+    name: string option;
+  }
+
   and disk = {
     device: string;
     size: Units.Size.t option;
@@ -149,6 +154,7 @@ module Make(Ord: OrderedType) = struct
   }
 
   and hardware_desc =
+  | Baseboard of baseboard
   | Memory of memory
   | Disk of disk
   | Cpu of cpu
@@ -189,6 +195,7 @@ module Make(Ord: OrderedType) = struct
   and quota = Base.quota
   and daemon = Base.daemon info
   and memory = Base.memory info
+  and baseboard = Base.baseboard info
   and disk = Base.disk info
   and cpu = Base.cpu info
   and kernel = Base.kernel
