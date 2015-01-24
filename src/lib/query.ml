@@ -145,7 +145,7 @@ let q_mount mount =
   try
     let elem = List.find (fun s -> contains s mount.m_device) output_lines in
     let size = read_process (__ "df -h -P 2>/dev/null | sed -n 's@^%s *\\([^ ]*\\).*$@\\1@p' | sed 's/,/./g'" mount.m_device) in
-    let size = Units.Size.make (let s = ExtString.String.strip size in if s = "" then "0" else s^"B") in
+    let size = Units.Size.make (if size = "" then "0" else size^"B") in
     begin match ExtString.String.nsplit elem " " with
           | _ :: mount_point :: "type" :: mount_fstype :: mount_options :: [] ->
              if mount.m_options = Some mount_options (* FIXME: Options can be in a different order *)
@@ -313,7 +313,7 @@ let q_netconfig in_classes netconfig =
 
 let q_disk disk =
   let output = read_process (__ "lsblk -n -d %s 2>/dev/null | awk '{ print $4 }' | sed 's@,@.@'" disk.device) in
-  let output = (ExtString.String.strip output) ^ "B" in
+  let output = output ^ "B" in
   try
     let siz = Units.Size.make output in
     match disk.size with
@@ -343,15 +343,15 @@ let q_memory memory =
                           else fail (mem_rslt, memory)
 
 let q_cpu cpu =
-  let model = ExtString.String.strip (read_process "sed -n '/^model name/{s/.*: //pg;q;}' /proc/cpuinfo") in
+  let model = read_process "sed -n '/^model name/{s/.*: //pg;q;}' /proc/cpuinfo" in
   let maxf  = read_process "lscpu | sed -n 's/CPU MHz:[ ]*//p'" in
-  let maxf = (Units.Freq.make((ExtString.String.strip maxf)^"MHz")) in
+  let maxf = Units.Freq.make (maxf^"MHz") in
   let core = read_process "lscpu | sed -n 's@Core(s) per socket:[ ]*@@p'" in
-  let core = int_of_string (ExtString.String.strip core) in
+  let core = int_of_string core in
   let socket = read_process "lscpu | sed -n 's@Socket(s):[ ]*@@p'" in
-  let socket = int_of_string (ExtString.String.strip socket) in
+  let socket = int_of_string socket in
   let thread = read_process "lscpu | sed -n 's@Thread(s) per core:[ ]*@@p'" in
-  let thread = int_of_string (ExtString.String.strip thread) in
+  let thread = int_of_string thread in
   match cpu.maxfreq with
   | Some maxfreq ->
      if Units.Freq.compare maxfreq maxf = 0
