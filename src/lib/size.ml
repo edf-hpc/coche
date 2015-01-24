@@ -97,7 +97,7 @@ let compare n1 n2 =
   Pervasives.compare v1 v2
 
 let to_string n =
-  Printf.sprintf "%.2f %s%c"
+  Printf.sprintf "%.2f%s%c"
     n.size
     (string_of_mutlplier n.multiplier n.base10)
     (char_of_unit n.unit)
