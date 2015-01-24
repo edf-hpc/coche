@@ -114,9 +114,10 @@ module P = struct
     let labels = List.map2 (fun l -> function | Some n -> pf "%d %s%s" n l (if n > 1 then "s" else "") | _ -> "") l_labels l_numbers in
     let labels = List.filter (fun text -> text <> "") labels in
     Format.fprintf
-      fmt "%s%a"
+      fmt "%s%a%a"
       (String.concat " x " labels)
       (option Format.pp_print_string " @") (option_map Units.Freq.to_string c.Ast.Base.maxfreq)
+      (option ~suffix:"\"" Format.pp_print_string " \"") c.Ast.Base.model
 
   let quota fmt q =
     let q_type = match q.Ast.Base.q_type with `Soft -> "soft" | `Hard -> "hard" in

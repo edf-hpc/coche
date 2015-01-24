@@ -309,11 +309,13 @@ let rec read_hardware hard input =
         in
         read_hardware hard input
     | `El_start ((_, "cpu"), attrs) ->
-        let attr_values = read_element_option "cpu" ["maxfreq"; "sockets"; "cores"; "threads"] input in
+        let attr_values = read_element_option "cpu" ["maxfreq"; "sockets"; "cores"; "threads"; "model"] input in
         let hard = Cpu { maxfreq = Option.map Units.Freq.make (List.nth attr_values 0);
                          sockets = Option.map int_of_string (List.nth attr_values 1);
                          cores = Option.map int_of_string (List.nth attr_values 2);
-                         threads = Option.map int_of_string (List.nth attr_values 3); } :: hard
+                         threads = Option.map int_of_string (List.nth attr_values 3);
+                         model = List.nth attr_values 4;
+                       } :: hard
         in
         read_hardware hard input
     | _ -> hard

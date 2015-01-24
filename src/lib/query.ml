@@ -343,6 +343,7 @@ let q_memory memory =
                           else fail (mem_rslt, memory)
 
 let q_cpu cpu =
+  let model = ExtString.String.strip (read_process "sed -n '/^model name/{s/.*: //pg;q;}' /proc/cpuinfo") in
   let maxf  = read_process "lscpu | sed -n 's/CPU MHz:[ ]*//p'" in
   let maxf = (Units.Freq.make((ExtString.String.strip maxf)^"MHz")) in
   let core = read_process "lscpu | sed -n 's@Core(s) per socket:[ ]*@@p'" in
@@ -354,13 +355,15 @@ let q_cpu cpu =
   match cpu.maxfreq with
   | Some maxfreq ->
      if Units.Freq.compare maxfreq maxf = 0
-	&& cpu.cores = Some core
-	&& cpu.sockets = Some socket
-	&& cpu.threads = Some thread
+        && (cpu.model = None || cpu.model = Some model)
+	&& (cpu.cores = None || cpu.cores = Some core)
+	&& (cpu.sockets = None || cpu.sockets = Some socket)
+	&& (cpu.threads = None || cpu.threads = Some thread)
      then
        ok cpu
      else
-       fail ({ maxfreq = Some maxf;
+       fail ({ model = Some model;
+               maxfreq = Some maxf;
 	       cores = Some core;
 	       sockets = Some socket;
 	       threads = Some thread

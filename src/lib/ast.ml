@@ -78,6 +78,7 @@ module Base = struct
   }
 
   and cpu = {
+    model: string option;
     maxfreq: Units.Freq.t option;
     cores: int option;
     sockets: int option;

@@ -52,6 +52,8 @@
 			<!ATTLIST cpu cores CDATA #IMPLIED >
 			<!-- threads : ... -->
 			<!ATTLIST cpu threads CDATA #IMPLIED >
+			<!-- model : ... -->
+			<!ATTLIST cpu model CDATA #IMPLIED >
 	<!ELEMENT service ((node | include)+) >
 		<!ATTLIST service name CDATA #REQUIRED >
 		<!ELEMENT node ((mount | daemon | packages | system | file)*) >
