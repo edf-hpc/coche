@@ -333,11 +333,13 @@ let q_memory memory =
     | [] -> Units.Freq.make "0"
     | f::_ -> Units.Freq.make f
   in
+  let ram_modules = read_process "dmidecode -t memory | grep Size | grep -v 'No Module Installed' | wc -l" in
   let mem = Units.Size.make mem in
   let swap = Units.Size.make swap in
   let mem_rslt = { swap = Some swap;
                    ram = Some mem;
-                   ram_speed = Some ram_speed
+                   ram_speed = Some ram_speed;
+                   ram_modules = Some (int_of_string ram_modules)
                  }
   in
   match memory.swap, memory.ram  with

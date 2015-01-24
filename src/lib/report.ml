@@ -98,28 +98,23 @@ module P = struct
 
   let memory fmt m =
     let space =
-      begin
-        match m.Ast.Base.ram, m.Ast.Base.ram_speed with
-        | None, Some s ->
-           Format.fprintf fmt "Ram:@@%s" (Units.Freq.to_string s);
-           true
-        | Some m, Some s ->
-           Format.fprintf
-             fmt
-             "Ram:%s@@%s"
-             (Units.Size.to_string m)
-             (Units.Freq.to_string s);
-           true
-        | Some m, None ->
-           Format.fprintf
-             fmt
-             "Ram:%s"
-             (Units.Size.to_string m);
-           true
-        | None, None ->
-           false
-      end
+      if Option.is_some m.Ast.Base.ram
+         || Option.is_some m.Ast.Base.ram_speed
+         || Option.is_some m.Ast.Base.ram_modules
+      then
+        (Format.pp_print_string fmt "Ram:"; true)
+      else
+        false
     in
+    Format.fprintf
+      fmt
+      "%a%a%a"
+      (option Format.pp_print_string "")
+      (option_map Units.Size.to_string m.Ast.Base.ram)
+      (option Format.pp_print_string (if Option.is_some m.Ast.Base.ram then " @" else ""))
+      (option_map Units.Freq.to_string m.Ast.Base.ram_speed)
+      (option Format.pp_print_string (if Option.is_some m.Ast.Base.ram || Option.is_some m.Ast.Base.ram_speed then " x" else ""))
+      (option_map string_of_int m.Ast.Base.ram_modules);
     let () = if space && Option.is_some m.Ast.Base.swap then Format.fprintf fmt " " in
     option Format.pp_print_string "Swap:" fmt (option_map Units.Size.to_string m.Ast.Base.swap)
 

@@ -41,6 +41,8 @@
 			<!ATTLIST memory ram CDATA #IMPLIED >
 			<!-- ram-speed : max speed of memory modules -->
 			<!ATTLIST memory ram-speed CDATA #IMPLIED >
+			<!-- ram-modules : number of installed memory modules -->
+			<!ATTLIST memory ram-modules CDATA #IMPLIED >
 		<!ELEMENT disk  EMPTY >
 			<!ATTLIST disk device CDATA #REQUIRED >
 			<!-- size : disk size in kb -->
