@@ -97,8 +97,30 @@ module P = struct
 
 
   let memory fmt m =
-    option Format.pp_print_string "Ram:" fmt (option_map Units.Size.to_string m.Ast.Base.ram);
-    (match m.Ast.Base.ram, m.Ast.Base.swap with Some _, Some _ -> Format.fprintf fmt " " | _ -> ());
+    let space =
+      begin
+        match m.Ast.Base.ram, m.Ast.Base.ram_speed with
+        | None, Some s ->
+           Format.fprintf fmt "Ram:@@%s" (Units.Freq.to_string s);
+           true
+        | Some m, Some s ->
+           Format.fprintf
+             fmt
+             "Ram:%s@@%s"
+             (Units.Size.to_string m)
+             (Units.Freq.to_string s);
+           true
+        | Some m, None ->
+           Format.fprintf
+             fmt
+             "Ram:%s"
+             (Units.Size.to_string m);
+           true
+        | None, None ->
+           false
+      end
+    in
+    let () = if space && Option.is_some m.Ast.Base.swap then Format.fprintf fmt " " in
     option Format.pp_print_string "Swap:" fmt (option_map Units.Size.to_string m.Ast.Base.swap)
 
   let disk fmt d =

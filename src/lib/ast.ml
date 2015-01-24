@@ -70,6 +70,7 @@ module Base = struct
   and memory = {
     swap: Units.Size.t option;
     ram: Units.Size.t option;
+    ram_speed: Units.Freq.t option;
   }
 
   and disk = {

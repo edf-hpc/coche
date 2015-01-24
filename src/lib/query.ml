@@ -327,9 +327,19 @@ let q_disk disk =
 let q_memory memory =
   let mem  = read_process "sed -n 's/MemTotal:[ ]*//p' /proc/meminfo" in
   let swap = read_process "sed -n 's/SwapTotal:[ ]*//p' /proc/meminfo" in
-  let mem = (Units.Size.make mem) in
-  let swap = (Units.Size.make swap) in
-  let mem_rslt = {swap = Some swap ; ram = Some mem } in
+  let ram_speeds = read_process_lines "dmidecode -t memory | sed -n 's/^\tSpeed: \\([0-9].*\\)/\\1/p' | sort -ru" in
+  let ram_speed =
+    match ram_speeds with
+    | [] -> Units.Freq.make "0"
+    | f::_ -> Units.Freq.make f
+  in
+  let mem = Units.Size.make mem in
+  let swap = Units.Size.make swap in
+  let mem_rslt = { swap = Some swap;
+                   ram = Some mem;
+                   ram_speed = Some ram_speed
+                 }
+  in
   match memory.swap, memory.ram  with
   | Some m_swap, Some ram -> if (Units.Size.compare m_swap swap) = 0 && (Units.Size.compare ram mem) = 0
                              then ok memory
