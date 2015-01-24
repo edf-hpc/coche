@@ -76,6 +76,7 @@ let tmp_prefix () =
 let tmp_binary_name = (tmp_prefix ()) ^ ".exe"
 let tmp_cluster_file = (tmp_prefix ()) ^ ".cluster"
 let remote_cluster_file host = tmp_cluster_file ^ "." ^ host
+let remote_binary_file host = tmp_binary_name ^ "." ^ host
 
 let send_files (password, host) sources destination =
   let _ =
@@ -109,9 +110,11 @@ let global_status = Progress.make_status 0 0 0
 let f_worker (password, host) =
   try
     let remote_cluster_file = remote_cluster_file host in
+    let remote_binary_file = remote_binary_file host in
     let _ = Sys.command(Printf.sprintf "ln -s %s %s" tmp_cluster_file remote_cluster_file) in
-    send_files (password, host) [| tmp_binary_name; remote_cluster_file |] "/tmp";
-    let ssh_output = launch_worker (password, host) tmp_binary_name in
+    let _ = Sys.command(Printf.sprintf "ln -s %s %s" tmp_binary_name remote_binary_file) in
+    send_files (password, host) [| remote_binary_file; remote_cluster_file |] "/tmp";
+    let ssh_output = launch_worker (password, host) remote_binary_file in
     begin
       try
         let _, report_raw = ExtString.String.split ssh_output coche_mark in
@@ -137,27 +140,21 @@ let master ((password, host), _) partial_report =
     | Failed (h, e) ->
        Progress.update ~failed:1 global_status
   end;
-  let remote_cluster_file = remote_cluster_file host in
-  Unix.unlink remote_cluster_file;
-  if not !dirty then
-    Terminal.ssh_no_errors
-      host
-      password
-      [|"/bin/rm"; "-f";
-        remote_cluster_file;
-        tmp_binary_name;
-       |];
   reports := partial_report :: !reports;
   []
 
 let main () =
   if !worker then
+    let clean_up () =
+      FileUtil.rm [!worker_cluster_file; Sys.argv.(0)]
+    in
     begin
       let my_hostname = FilePath.get_extension !worker_cluster_file in
       let () = Utils.set_hostname my_hostname in
       let cluster = Utils.with_in_file !worker_cluster_file input_value in
       let result = Query.run my_hostname cluster in
       let report = Report.make result in
+      let () = if not !dirty then clean_up () in
       print_string coche_mark;
       print_string (Base64.str_encode (Marshal.to_string report []))
     end
