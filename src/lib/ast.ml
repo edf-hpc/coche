@@ -79,6 +79,11 @@ module Base = struct
     name: string option;
   }
 
+  and pci = {
+    field: string;
+    desc: string;
+  }
+
   and disk = {
     device: string;
     size: Units.Size.t option;
@@ -155,6 +160,7 @@ module Make(Ord: OrderedType) = struct
 
   and hardware_desc =
   | Baseboard of baseboard
+  | Pci of pci
   | Memory of memory
   | Disk of disk
   | Cpu of cpu
@@ -196,6 +202,7 @@ module Make(Ord: OrderedType) = struct
   and daemon = Base.daemon info
   and memory = Base.memory info
   and baseboard = Base.baseboard info
+  and pci = Base.pci info
   and disk = Base.disk info
   and cpu = Base.cpu info
   and kernel = Base.kernel

@@ -327,6 +327,23 @@ let q_baseboard baseboard =
   else
     fail ({vendor = vendor; name = Some name}, baseboard)
 
+let q_pci p =
+  let pci_devices = read_process_lines "lspci" in
+  let devices = List.filter (fun l -> ExtString.String.exists l p.field) pci_devices in
+  let devices =
+    List.map
+      (fun l ->
+       try
+         snd (ExtString.String.split l ": ")
+       with _ ->
+         l
+      )
+      devices in
+  if List.mem p.desc devices then
+    ok p
+  else
+    fail ({field = ""; desc = ""}, p)
+
 let q_disk disk =
   let output = read_process (__ "lsblk -n -d %s 2>/dev/null | awk '{ print $4 }' | sed 's@,@.@'" disk.device) in
   let output = output ^ "B" in
@@ -401,6 +418,7 @@ let q_cpu cpu =
 let q_hardware_desc run hardware_desc =
   match hardware_desc with
   | Dtd.Baseboard baseboard -> Baseboard (run_or_skip run q_baseboard baseboard)
+  | Dtd.Pci pci -> Pci (run_or_skip run q_pci pci)
   | Dtd.Memory memory -> Memory (run_or_skip run q_memory memory)
   | Dtd.Disk disk -> Disk (run_or_skip run q_disk disk)
   | Dtd.Cpu cpu -> Cpu (run_or_skip run q_cpu cpu)

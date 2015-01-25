@@ -31,13 +31,17 @@
 			<!ATTLIST device target CDATA #REQUIRED >
 			<!ATTLIST device name CDATA #REQUIRED >
 			<!ATTLIST device state (up | down) "up">
-	<!ELEMENT hardware (baseboard|memory|disk|cpu)* >
+	<!ELEMENT hardware (baseboard|pci|memory|disk|cpu)* >
 		<!ATTLIST hardware name CDATA #REQUIRED >
 		<!ATTLIST hardware classes CDATA #REQUIRED >
 		<!ELEMENT baseboard EMPTY >
 			<!ATTLIST baseboard vendor CDATA #REQUIRED >
 			<!-- name : model name of the baseboard -->
 			<!ATTLIST baseboard name CDATA #IMPLIED >
+		<!ELEMENT pci EMPTY >
+			<!ATTLIST pci type CDATA #REQUIRED >
+			<!-- desc : description of the device -->
+			<!ATTLIST pci desc CDATA #REQUIRED >
 		<!ELEMENT memory EMPTY >
 			<!-- swap : swap space size in kb -->
 			<!ATTLIST memory swap CDATA #IMPLIED >

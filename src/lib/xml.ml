@@ -302,6 +302,12 @@ let rec read_hardware hard input =
                                name = List.nth attr_values 1 } :: hard
         in
         read_hardware hard input
+    | `El_start ((_, "pci"), attrs) ->
+        let attr_values = read_element_option "pci" ["type"; "desc"] input in
+        let hard = Pci { field = Option.get (List.nth attr_values 0);
+                         desc = Option.get (List.nth attr_values 1) } :: hard
+        in
+        read_hardware hard input
     | `El_start ((_, "memory"), attrs) ->
         let attr_values = read_element_option "memory" ["swap"; "ram"; "ram-speed"; "ram-modules"] input in
         let hard = Memory { swap = Option.map Units.Size.make (List.nth attr_values 0);

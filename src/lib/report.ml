@@ -124,6 +124,12 @@ module P = struct
       b.Ast.Base.vendor
       (option Format.pp_print_string " ") b.Ast.Base.name
 
+  let pci fmt p =
+    Format.fprintf
+      fmt "%s: %s"
+      p.Ast.Base.field
+      p.Ast.Base.desc
+
   let disk fmt d =
     Format.fprintf
       fmt "%s%a"
@@ -230,6 +236,7 @@ let r_system system =
 let r_hardware_desc hardware_desc =
   match hardware_desc with
   | Result.Baseboard baseboard -> M.Baseboard (r_result baseboard)
+  | Result.Pci pci -> M.Pci (r_result pci)
   | Result.Memory memory -> M.Memory (r_result memory)
   | Result.Disk disk -> M.Disk (r_result disk)
   | Result.Cpu cpu -> M.Cpu (r_result cpu)
@@ -336,6 +343,8 @@ let mr_hardware_desc hardware_desc1 hardware_desc2 =
   match hardware_desc1 ,hardware_desc2  with
     | M.Baseboard baseboard1, M.Baseboard baseboard2 ->
       M.Baseboard (merge_report_info baseboard1 baseboard2)
+    | M.Pci pci1, M.Pci pci2 ->
+      M.Pci (merge_report_info pci1 pci2)
     | M.Memory memory1, M.Memory memory2 ->
       M.Memory (merge_report_info memory1 memory2)
     | M.Disk disk1, M.Disk disk2 ->
@@ -463,6 +472,7 @@ let print_system fmt system =
 let print_hardware_desc fmt hardware_desc =
   match hardware_desc with
   | M.Baseboard baseboard -> print_element fmt P.baseboard "Baseboard" baseboard
+  | M.Pci pci -> print_element fmt P.pci "Pci" pci
   | M.Memory memory -> print_element fmt P.memory "Memory" memory
   | M.Disk disk -> print_element fmt P.disk "Disk" disk
   | M.Cpu cpu -> print_element fmt P.cpu "CPU" cpu
