@@ -58,3 +58,13 @@ let set_hostname, get_hostname =
              | None -> read_process "hostname"
              | Some h -> h
   )
+
+let option_eq o v =
+  match o with
+  | Some o -> o = v
+  | None -> true
+
+let option_same o v =
+  match o with
+  | Some _ -> Some v
+  | None -> None

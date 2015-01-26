@@ -52,7 +52,7 @@ let __ = Printf.sprintf
 
 let q_packages run packages =
   if not run then
-    { p_status = skip packages.Dtd.p_status ;
+    { p_status = skip packages.Dtd.p_status;
       p_match = skip packages.Dtd.p_match;
     }
   else
@@ -62,8 +62,8 @@ let q_packages run packages =
       List.fold_left
         (fun map line ->
          let status, package = match (ExtString.String.nsplit line " ") with
-	   | status::package::_ -> status, package
-	   | _ -> assert false
+           | status::package::_ -> status, package
+           | _ -> assert false
          in
          assert(String.length(status) > 0);
          let status = if status.[0] = 'i' then `Installed else `Absent in
@@ -76,10 +76,10 @@ let q_packages run packages =
       List.map
         (fun (pkg, status) ->
          try
-	   let found = SMap.find pkg dpkg_l in
-	   pkg, status, found
+           let found = SMap.find pkg dpkg_l in
+           pkg, status, found
          with Not_found ->
-	   pkg, status, `Absent
+           pkg, status, `Absent
         )
         packages.Dtd.p_status
     in
@@ -98,14 +98,14 @@ let q_packages run packages =
       else
         let fail_l =
           List.fold_left
-	    (fun acc elt ->
-	     let pkg, status, found = elt in
-	     if status <> found
-	     then (pkg,found)::acc
-	     else acc
-	    )
-	    []
-	    l_st
+            (fun acc elt ->
+             let pkg, status, found = elt in
+             if status <> found
+             then (pkg,found)::acc
+             else acc
+            )
+            []
+            l_st
         in
         fail (fail_l, packages.Dtd.p_status) (* double fail *)
     in
@@ -134,11 +134,11 @@ let q_daemon daemon =
 let q_mount mount =
   let output_lines = read_process_lines "mount | awk '{ print $1,$3,$4,$5 }'" in
   let failed = { m_name = mount.m_name;
-	         m_options = None;
-	         m_mountpoint = mount.m_mountpoint;
-	         m_fstype = None;
-	         m_device = mount.m_device;
-	         m_size = None;
+                 m_options = None;
+                 m_mountpoint = mount.m_mountpoint;
+                 m_fstype = None;
+                 m_device = mount.m_device;
+                 m_size = None;
                  m_quota = [] (* FIXME: Quota check is not implemented! *)
                }
   in
@@ -148,27 +148,27 @@ let q_mount mount =
     let size = Units.Size.make (if size = "" then "0" else size^"B") in
     begin match ExtString.String.nsplit elem " " with
           | _ :: mount_point :: "type" :: mount_fstype :: mount_options :: [] ->
-             if mount.m_options = Some mount_options (* FIXME: Options can be in a different order *)
-                && mount.m_fstype = Some mount_fstype
+             if option_eq mount.m_options mount_options (* FIXME: Options can be in a different order *)
+                && option_eq mount.m_fstype mount_fstype
                 && mount.m_mountpoint = mount_point
              then
                ok mount
-             else fail ({ failed with m_options = Some mount_options;
+             else fail ({ failed with m_options    = option_same mount.m_options mount_options;
                                       m_mountpoint = mount_point;
-                                      m_fstype = Some mount_fstype;
-                                      m_size = Some size;
+                                      m_fstype     = option_same mount.m_fstype mount_fstype;
+                                      m_size       = option_same mount.m_size size;
                         }
                        , mount)
           | _ :: mount_point :: "type" :: mount_fstype :: [] ->
              if mount.m_options = None
-                && mount.m_fstype = Some mount_fstype
+                && option_eq mount.m_fstype mount_fstype
                 && mount.m_mountpoint = mount_point
              then
                ok mount
-             else fail ({ failed with m_options = None;
+             else fail ({ failed with m_options    = None;
                                       m_mountpoint = mount_point;
-                                      m_fstype = Some mount_fstype;
-                                      m_size = Some size;
+                                      m_fstype     = option_same mount.m_fstype mount_fstype;
+                                      m_size       = option_same mount.m_size size;
                         }
                        , mount)
           | _ ->
@@ -178,12 +178,12 @@ let q_mount mount =
        fail (failed, mount)
 
 let q_file run file =
-  let file_o = {f_name = file.f_name;
-	        f_owner = file.f_owner;
-	        f_group = file.f_group;
-	        f_same = Digest.file "/dev/null";
-	        f_perms = file.f_perms;
-	        f_type = file.f_type } in
+  let file_o = {f_name  = file.f_name;
+                f_owner = file.f_owner;
+                f_group = file.f_group;
+                f_same  = Digest.file "/dev/null";
+                f_perms = file.f_perms;
+                f_type  = file.f_type } in
   if not run then
     skip file_o
   else
@@ -195,16 +195,16 @@ let q_file run file =
     let group = group.gr_name in
     let kind = siz.st_kind in
     let perm = siz.st_perm in
-    let file_r = {f_name = file.f_name;
-	          f_owner = Some owner;
-	          f_group = Some group;
-	          f_same = Digest.file file_name;
-	          f_perms = Some perm;
-	          f_type = kind } in
-    if file.f_owner = Some owner
-       && file.f_group = Some group
+    let file_r = {f_name  = file.f_name;
+                  f_owner = option_same file.f_owner owner;
+                  f_group = option_same file.f_group group;
+                  f_same  = Digest.file file_name;
+                  f_perms = option_same file.f_perms perm;
+                  f_type  = kind } in
+    if option_eq file.f_owner owner
+       && option_eq file.f_group group
        && file.f_type = kind
-       && file.f_perms = Some perm
+       && option_eq file.f_perms perm
     then
       ok file_r
     else
@@ -215,13 +215,12 @@ let q_sysconfig sysconfig =
   let arch = read_process "uname -m"  in
   match sysconfig with
     | Ast.Base.Kernel kernel ->
-      if kernel.k_version = vers
-        && (kernel.k_arch = None || kernel.k_arch = Some arch)
+      if kernel.k_version = vers && option_eq kernel.k_arch arch
       then
-	ok sysconfig
+        ok sysconfig
       else
-        let sysref = Ast.Base.Kernel { k_version = vers; k_arch = Some arch } in
-	fail (sysref, sysconfig)
+        let sysref = Ast.Base.Kernel { k_version = vers; k_arch = option_same kernel.k_arch arch } in
+        fail (sysref, sysconfig)
 
 let q_system run system =
   let syname = system.Dtd.sys_name in
@@ -321,11 +320,11 @@ let q_baseboard baseboard =
       ExtString.String.strip
   in
   if baseboard.b_vendor = vendor
-     && (baseboard.b_name = None || baseboard.b_name = Some name)
+     && option_eq baseboard.b_name name
   then
     ok baseboard
   else
-    fail ({b_vendor = vendor; b_name = Some name}, baseboard)
+    fail ({b_vendor = vendor; b_name = option_same baseboard.b_name name}, baseboard)
 
 let q_pci p =
   let pci_devices = read_process_lines "lspci" in
@@ -345,7 +344,7 @@ let q_pci p =
     fail ({field = ""; desc = ""}, p)
 
 let q_disk disk =
-  let output = read_process (__ "lsblk -n -d %s 2>/dev/null | awk '{ print $4 }' | sed 's@,@.@'" disk.device) in
+  let output = read_process (__ "lsblk -n -d -o SIZE %s 2>/dev/null | sed 's@,@.@'" disk.device) in
   let output = output ^ "B" in
   try
     let siz = Units.Size.make output in
@@ -369,10 +368,10 @@ let q_memory memory =
   let ram_modules = read_process "dmidecode -t memory | grep Size | grep -v 'No Module Installed' | wc -l" in
   let mem = Units.Size.make mem in
   let swap = Units.Size.make swap in
-  let mem_rslt = { swap = Some swap;
-                   ram = Some mem;
-                   ram_speed = Some ram_speed;
-                   ram_modules = Some (int_of_string ram_modules);
+  let mem_rslt = { swap = option_same memory.swap swap;
+                   ram = option_same memory.ram mem;
+                   ram_speed = option_same memory.ram_speed ram_speed;
+                   ram_modules = option_same memory.ram_modules (int_of_string ram_modules);
                    ram_delta = memory.ram_delta
                  }
   in
@@ -416,19 +415,19 @@ let q_cpu cpu =
   match cpu.maxfreq with
   | Some maxfreq ->
      if Units.Freq.compare maxfreq maxf = 0
-        && (cpu.model = None || cpu.model = Some model)
-	&& (cpu.cores = None || cpu.cores = Some core)
-	&& (cpu.sockets = None || cpu.sockets = Some socket)
-	&& (cpu.threads = None || cpu.threads = Some thread)
+        && option_eq cpu.model model
+        && option_eq cpu.cores core
+        && option_eq cpu.sockets socket
+        && option_eq cpu.threads thread
      then
        ok cpu
      else
-       fail ({ model = Some model;
-               maxfreq = Some maxf;
-	       cores = Some core;
-	       sockets = Some socket;
-	       threads = Some thread
-	     }, cpu)
+       fail ({ model   = option_same cpu.model model;
+               maxfreq = option_same cpu.maxfreq maxf;
+               cores   = option_same cpu.cores core;
+               sockets = option_same cpu.sockets socket;
+               threads = option_same cpu.threads thread
+             }, cpu)
   | None -> ok cpu
 
 let q_hardware_desc run hardware_desc =
