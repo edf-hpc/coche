@@ -72,6 +72,7 @@ module Base = struct
     ram: Units.Size.t option;
     ram_speed: Units.Freq.t option;
     ram_modules: int option;
+    ram_delta: Units.Size.t option;
   }
 
   and baseboard = {

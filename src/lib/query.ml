@@ -372,20 +372,36 @@ let q_memory memory =
   let mem_rslt = { swap = Some swap;
                    ram = Some mem;
                    ram_speed = Some ram_speed;
-                   ram_modules = Some (int_of_string ram_modules)
+                   ram_modules = Some (int_of_string ram_modules);
+                   ram_delta = memory.ram_delta
                  }
   in
-  match memory.swap, memory.ram  with
-  | Some m_swap, Some ram -> if (Units.Size.compare m_swap swap) = 0 && (Units.Size.compare ram mem) = 0
-                             then ok memory
-                             else fail (mem_rslt, memory)
-  | None, None  ->  ok memory
-  | None, Some ram ->  if (Units.Size.compare ram mem) = 0
-                       then ok memory
-                       else fail (mem_rslt, memory)
-  | Some m_swap, None ->  if (Units.Size.compare m_swap swap) = 0
-                          then ok memory
-                          else fail (mem_rslt, memory)
+  match memory.swap, memory.ram, memory.ram_delta with
+  | Some m_swap, Some ram, Some delta ->
+      let mem = Units.Size.sub mem memory.ram_delta in
+      if (Units.Size.compare m_swap swap = 0)
+        && (Units.Size.compare ram mem) >= 0
+      then ok memory
+      else fail (mem_rslt, memory)
+  | Some m_swap, Some ram, None ->
+      if (Units.Size.compare m_swap swap = 0)
+        && (Units.Size.compare ram mem) = 0
+      then ok memory
+      else fail (mem_rslt, memory)
+  | None, None, _  ->  ok memory
+  | None, Some ram, Some delta ->
+      let mem = Units.Size.sub mem memory.ram_delta in
+      if (Units.Size.compare ram mem) >= 0
+      then ok memory
+      else fail (mem_rslt, memory)
+  | None, Some ram, None ->
+      if (Units.Size.compare ram mem) = 0
+      then ok memory
+      else fail (mem_rslt, memory)
+  | Some m_swap, None, _ ->
+      if (Units.Size.compare m_swap swap) = 0
+      then ok memory
+      else fail (mem_rslt, memory)
 
 let q_cpu cpu =
   let model = read_process "sed -n '/^model name/{s/.*: //pg;q;}' /proc/cpuinfo" in

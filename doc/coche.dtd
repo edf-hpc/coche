@@ -51,6 +51,8 @@
 			<!ATTLIST memory ram-speed CDATA #IMPLIED >
 			<!-- ram-modules : number of installed memory modules -->
 			<!ATTLIST memory ram-modules CDATA #IMPLIED >
+			<!-- ram-delta : delta wrt. ram size -->
+			<!ATTLIST memory ram-delta CDATA #IMPLIED >
 		<!ELEMENT disk  EMPTY >
 			<!ATTLIST disk device CDATA #REQUIRED >
 			<!-- size : disk size in kb -->

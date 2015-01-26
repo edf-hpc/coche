@@ -101,3 +101,10 @@ let to_string n =
     n.size
     (string_of_mutlplier n.multiplier n.base10)
     (char_of_unit n.unit)
+
+let sub s1 s2 =
+  match s2 with
+    | None -> s1
+    | Some s2 ->
+        let v = max 0. (value s1 -. value s2) in
+        make (string_of_float v)
