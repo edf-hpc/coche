@@ -215,7 +215,8 @@ let q_sysconfig sysconfig =
   let arch = read_process "uname -m"  in
   match sysconfig with
     | Ast.Base.Kernel kernel ->
-      if (kernel.k_version = vers && kernel.k_arch = Some arch)
+      if kernel.k_version = vers
+        && (kernel.k_arch = None || kernel.k_arch = Some arch)
       then
 	ok sysconfig
       else
