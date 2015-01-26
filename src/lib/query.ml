@@ -278,17 +278,16 @@ let q_netdevice should_run netdevice =
       let result = read_process (__ "/bin/ip addr show dev %s | sed -n 's@[ ]*inet6\\?[ ]*\\([^ /]*\\).*$@\\1@pg'" name) in
       let addrs = ExtString.String.nsplit result "\n" in
       let addrs = List.fold_left (fun addrs addr -> try (Network.ip addr) :: addrs with _ -> addrs) [] addrs in
-      let my_ip = List.assoc
-                    (Utils.get_hostname ())
+      let my_ips = List.filter (fun (host, ip) -> ExtString.String.ends_with host (Utils.get_hostname ()))
                     (List.combine
                        (Network.expand_hosts netdevice.Dtd.nd_target.Ast.a_hosts)
                        (Network.expand_range netdevice.Dtd.nd_target.Ast.a_range)
                     )
       in
-      if List.mem (Network.ip my_ip) addrs && state = netdevice.Dtd.nd_state
-      then
+      match my_ips with
+      | [_,my_ip] when List.mem (Network.ip my_ip) addrs && state = netdevice.Dtd.nd_state ->
         ok netdevice.Dtd.nd_state
-      else
+      | _ ->
         fail (state, netdevice.Dtd.nd_state)
     end
   else
