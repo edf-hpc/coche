@@ -75,8 +75,8 @@ module Base = struct
   }
 
   and baseboard = {
-    vendor: string;
-    name: string option;
+    b_vendor: string;
+    b_name: string option;
   }
 
   and pci = {

@@ -121,8 +121,8 @@ module P = struct
   let baseboard fmt b =
     Format.fprintf
       fmt "%s%a"
-      b.Ast.Base.vendor
-      (option Format.pp_print_string " ") b.Ast.Base.name
+      b.Ast.Base.b_vendor
+      (option Format.pp_print_string " ") b.Ast.Base.b_name
 
   let pci fmt p =
     Format.fprintf

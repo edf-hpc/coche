@@ -298,8 +298,8 @@ let rec read_hardware hard input =
   match Xmlm.peek input with
     | `El_start ((_, "baseboard"), attrs) ->
         let attr_values = read_element_option "baseboard" ["vendor"; "name"] input in
-        let hard = Baseboard { vendor = Option.get (List.nth attr_values 0);
-                               name = List.nth attr_values 1 } :: hard
+        let hard = Baseboard { b_vendor = Option.get (List.nth attr_values 0);
+                               b_name = List.nth attr_values 1 } :: hard
         in
         read_hardware hard input
     | `El_start ((_, "pci"), attrs) ->

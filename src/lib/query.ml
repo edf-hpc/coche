@@ -320,12 +320,12 @@ let q_baseboard baseboard =
     Std.input_file "/sys/devices/virtual/dmi/id/board_name" $
       ExtString.String.strip
   in
-  if baseboard.vendor = vendor
-     && (baseboard.name = None || baseboard.name = Some name)
+  if baseboard.b_vendor = vendor
+     && (baseboard.b_name = None || baseboard.b_name = Some name)
   then
     ok baseboard
   else
-    fail ({vendor = vendor; name = Some name}, baseboard)
+    fail ({b_vendor = vendor; b_name = Some name}, baseboard)
 
 let q_pci p =
   let pci_devices = read_process_lines "lspci" in
