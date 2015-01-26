@@ -56,6 +56,11 @@ build:
 clean:
 	$(OCAMLBUILD) -clean
 
+# Test
+toplevel:
+	ocaml -init tests/toplevel.ml
+
+# Headers update
 headers:
 	headache -r -h _header Makefile \
 		$(filter-out lib/cocheArg.ml lib/cocheArg.mli,$(wildcard *.ml lib/*.ml lib/*.mli lib/*.mly lib/*.mll))
