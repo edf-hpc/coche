@@ -91,9 +91,9 @@ module P = struct
     match k with
     | Ast.Base.Kernel k ->
        Format.fprintf
-         fmt "%s %a"
+         fmt "%s%a"
          k.Ast.Base.k_version
-         (option Format.pp_print_string "") k.Ast.Base.k_arch
+         (option Format.pp_print_string " ") k.Ast.Base.k_arch
 
   let memory fmt m =
     let space =
