@@ -228,10 +228,7 @@ let q_system run system =
   let lst = List.fold_left
     (fun acc elt ->
       let elt = run_or_skip run q_sysconfig elt in
-      match elt with
-      | Ast.Result_info.Ok _ -> elt::acc
-      | Ast.Result_info.Fail _ -> acc
-      | Ast.Result_info.Skip _ -> acc
+      elt :: acc
     )
     []
     list_sys_conf in
