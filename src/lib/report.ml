@@ -95,7 +95,6 @@ module P = struct
          k.Ast.Base.k_version
          (option Format.pp_print_string "") k.Ast.Base.k_arch
 
-
   let memory fmt m =
     let space =
       if Option.is_some m.Ast.Base.ram
@@ -467,7 +466,7 @@ let print_file fmt file =
   print_element fmt P.file "File" file
 
 let print_system fmt system =
-  Format.fprintf fmt "@[<hv 2>System tests (%s):@ @;" system.M.sys_name;
+  Format.fprintf fmt "@[<hv 2>System tests (%s):@;" system.M.sys_name;
   List.iter (print_element fmt P.kernel "Kernel") system.M.sys_config;
   Format.fprintf fmt "@]@;<2 0>"
 
