@@ -7,6 +7,7 @@ lib/Xml
 lib/Terminal
 lib/CocheArg
 lib/Flags
+lib/Tree
 lib/Subcommand
 lib/Query
 lib/Report
