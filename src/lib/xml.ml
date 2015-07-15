@@ -282,12 +282,13 @@ let rec read_classes netlist classes input =
 let rec read_devices classes devices input =
   match Xmlm.peek input with
     | `El_start ((_, "device"), attrs) ->
-        let attr_values = read_element "device" ["name"; "target"; "state"] input in
-        let state = if (List.nth attr_values 2) = "up" then `Up else `Down in
+        let attr_values = read_element "device" ["name"; "target"; "flags"] input in
+        let flags = ExtString.String.nsplit (List.nth attr_values 2) "," in
+        let flags = List.map String.uppercase flags in
         let target = find_area (List.nth attr_values 1) classes in
         let devices = { nd_name = List.nth attr_values 0;
                         nd_target = target;
-                        nd_state = state } :: devices
+                        nd_flags = flags } :: devices
         in
         read_devices classes devices input
     | _ ->

@@ -264,13 +264,10 @@ let q_netdevice should_run netdevice =
   let name = netdevice.Dtd.nd_name in
   let st = if should_run then
     begin
-      let out = read_process (__ "/bin/ip link show dev %s" name)in
-      let state =
-        if contains out "state UP"
-        then
-          `Up
-        else
-          `Down
+       let out = read_process (__ "/bin/ip link show dev %s | sed -nr '1 s/.*<([^>]*)>.*/\\1/p'" name) in
+       let flag_mach = ExtString.String.nsplit out "," in
+       let flag_user = netdevice.Dtd.nd_flags in
+       let state = List.for_all (fun x -> List.mem x flag_mach) flag_user
       in
       let result = read_process (__ "/bin/ip addr show dev %s | sed -n 's@[ ]*inet6\\?[ ]*\\([^ /]*\\).*$@\\1@pg'" name) in
       let addrs = ExtString.String.nsplit result "\n" in
@@ -282,17 +279,17 @@ let q_netdevice should_run netdevice =
                     )
       in
       match my_ips with
-      | [_,my_ip] when List.mem (Network.ip my_ip) addrs && state = netdevice.Dtd.nd_state ->
-        ok netdevice.Dtd.nd_state
+      | [_,my_ip] when List.mem (Network.ip my_ip) addrs && state = true ->
+        ok netdevice.Dtd.nd_flags
       | _ ->
-        fail (state, netdevice.Dtd.nd_state)
+        fail (flag_mach, netdevice.Dtd.nd_flags)
     end
   else
-    skip netdevice.Dtd.nd_state
+    skip netdevice.Dtd.nd_flags
   in
   {Result.nd_name = name;
    nd_target = netdevice.Dtd.nd_target;
-   nd_state = st }
+   nd_flags = st }
 
 let q_netconfig in_classes netconfig =
   let should_run = in_classes netconfig.Dtd.nc_classes in

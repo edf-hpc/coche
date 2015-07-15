@@ -150,7 +150,7 @@ module Make(Ord: OrderedType) = struct
   and netdevice = {
     nd_name: string;
     nd_target: area;
-    nd_state: [ `Up | `Down ] info;
+    nd_flags: string list info;
   }
 
   and hardware = {

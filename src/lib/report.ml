@@ -184,8 +184,8 @@ module P = struct
     in Format.fprintf fmt "%s" kind
 
   let netdevice fmt nd =
-    let state = match nd with `Down -> "down" | `Up -> "up" in
-    Format.pp_print_string fmt state
+    let flags = ExtString.String.concat "," nd in
+    Format.pp_print_string fmt flags
 
 end
 
@@ -218,10 +218,10 @@ let r_file file =
   r_result file
 
 let r_netdevice netdevice =
-  let state = r_result netdevice.Result.nd_state in
+  let state = r_result netdevice.Result.nd_flags in
   { M.nd_name = netdevice.Result.nd_name;
     M.nd_target = netdevice.Result.nd_target;
-    M.nd_state = state
+    M.nd_flags = state
   }
 
 let r_system system =
@@ -322,10 +322,10 @@ let mr_file file1 file2 =
   merge_report_info file1 file2
 
 let mr_netdevice netdevice1 netdevice2 =
-  let state = merge_report_info netdevice1.M.nd_state netdevice2.M.nd_state   in
+  let state = merge_report_info netdevice1.M.nd_flags netdevice2.M.nd_flags in
   { M.nd_name = netdevice1.M.nd_name;
     M.nd_target = netdevice1.M.nd_target;
-    M.nd_state = state
+    M.nd_flags = state
   }
 
 let mr_system system1 system2 =
@@ -510,7 +510,7 @@ let print_netconfig fmt netconfig =
   List.iter
     (fun netdevice ->
        let name = Printf.sprintf "%s is" netdevice.M.nd_name in
-       print_element fmt P.netdevice name netdevice.M.nd_state
+       print_element fmt P.netdevice name netdevice.M.nd_flags
     )
     netconfig.M.nc_devices;
   Format.fprintf fmt "@]@;<2 0>"

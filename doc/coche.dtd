@@ -30,7 +30,7 @@
 			<!-- target : ... -->
 			<!ATTLIST device target CDATA #REQUIRED >
 			<!ATTLIST device name CDATA #REQUIRED >
-			<!ATTLIST device state (up | down) "up">
+			<!ATTLIST device flags CDATA #REQUIRED >
 	<!ELEMENT hardware (baseboard|pci|memory|disk|cpu)* >
 		<!ATTLIST hardware name CDATA #REQUIRED >
 		<!ATTLIST hardware classes CDATA #REQUIRED >
