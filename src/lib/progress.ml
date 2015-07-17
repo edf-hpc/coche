@@ -33,20 +33,22 @@ let clear_to_eol () = Printf.fprintf stdout "\027[K";;
 let bol () = Printf.fprintf stdout "\r";;
 
 let print st =
-  clear_to_eol ();
-  bol ();
-  let pos =
-    let completed = st.finished + st.failed in
-    if completed = st.total then
-      '='
-    else
-      List.nth seq (completed mod seq_len)
-  in
-  Printf.printf "%c Finished (\027[1;32m%4d\027[0m)\tFailed (\027[1;31m%4d\027[0m)\tTotal (%4d)%!"
-                pos
-                st.finished
-                st.failed
-                st.total
+  if not !quiet then begin
+    clear_to_eol ();
+    bol ();
+    let pos =
+      let completed = st.finished + st.failed in
+      if completed = st.total then
+	'='
+      else
+	List.nth seq (completed mod seq_len)
+    in
+    Printf.printf "%c Finished (\027[1;32m%4d\027[0m)\tFailed (\027[1;31m%4d\027[0m)\tTotal (%4d)%!"
+      pos
+      st.finished
+      st.failed
+      st.total
+  end
 
 let make_status finished failed total =
   { finished = finished; failed = failed; total = total }
