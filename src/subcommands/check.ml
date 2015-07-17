@@ -29,6 +29,7 @@ let debug = ref false
 let dirty = ref false
 let worker = ref false
 let worker_cluster_file = ref ""
+let worker_slaves_file = ref ""
 let reports = ref []
 let target_class = ref "default"
 
@@ -38,16 +39,22 @@ let set_debug () =
   debug := true;
   Functory.Control.set_debug true
 
+let set_worker () =
+  worker := true;
+  Progress.quiet := true
+
 let set_dtd f =
   if Sys.file_exists f
   then Xml.dtd_file := f
   else raise (Arg.Bad "Specified DTD file doesn't exist")
 
-let () = Functory.Cores.set_number_of_cores (Utils.processors_count ())
+let () = Functory.Cores.set_number_of_cores !Flags.par_level
 
 let set_parallelism p =
-  if p > 0 && p <= (Utils.processors_count ()) then
-    set_number_of_cores p
+  if p > 0 && p <= !Flags.par_level then begin
+    Functory.Cores.set_number_of_cores p;
+    Flags.par_level := p
+  end
 
 let spec = [
   "-dtd", Arg.String set_dtd, " Set DTD file";
@@ -57,8 +64,9 @@ let spec = [
   "--use-ssh-agent", Arg.Set Flags.use_ssh_agent, " Use SSH agent (when available)";
   "-s", Arg.Set Flags.use_ssh_agent, " Use SSH agent (when available)";
   "-c", Arg.Set_string target_class, " Specify default target class (from XML file)";
-  "-worker", Arg.Set worker, " (internal usage only)";
+  "-worker", Arg.Unit set_worker, " (internal usage only)";
   "-cluster", Arg.Set_string worker_cluster_file, " (internal usage only)";
+  "-slaves", Arg.Set_string worker_slaves_file, " (internal usage only)";
 ]
 
 let tmp_prefix =
@@ -77,6 +85,7 @@ let tmp_binary_name = (tmp_prefix ()) ^ ".exe"
 let tmp_cluster_file = (tmp_prefix ()) ^ ".cluster"
 let remote_cluster_file host = tmp_cluster_file ^ "." ^ host
 let remote_binary_file host = tmp_binary_name ^ "." ^ host
+let remote_slaves_file host = tmp_cluster_file ^ "." ^ host ^ ".slaves"
 
 let send_files (password, host) sources destination =
   let _ =
@@ -101,19 +110,24 @@ let launch_worker (password, host) binary =
   let flags = if !debug then Array.append flags [|"-debug"|] else flags in
   let flags = if !dirty then Array.append flags [|"-dirty"|] else flags in
   let flags = Array.append flags [| "-cluster"; remote_cluster_file host |] in
+  let flags = Array.append flags [| "-slaves"; remote_slaves_file host |] in
   Terminal.ssh
     host
     password
     flags
 
 let global_status = Progress.make_status 0 0 0
-let f_worker (password, host) =
+
+let f_worker (host, slaves) =
+  let password = "" in
   try
     let remote_cluster_file = remote_cluster_file host in
     let remote_binary_file = remote_binary_file host in
+    let remote_slaves_file = remote_slaves_file host in
+    let () = Utils.with_out_file remote_slaves_file (fun fd -> output_value fd slaves) in
     let _ = Sys.command(Printf.sprintf "ln -s %s %s" tmp_cluster_file remote_cluster_file) in
     let _ = Sys.command(Printf.sprintf "ln -s %s %s" tmp_binary_name remote_binary_file) in
-    send_files (password, host) [| remote_binary_file; remote_cluster_file |] "/tmp";
+    send_files (password, host) [| remote_binary_file; remote_cluster_file ; remote_slaves_file|] "/tmp";
     let ssh_output = launch_worker (password, host) remote_binary_file in
     begin
       try
@@ -132,7 +146,7 @@ let f_worker (password, host) =
   | e ->
      Failed (host, Printexc.to_string e)
 
-let master ((password, host), _) partial_report =
+let master ((host, slaves), _) partial_report =
   begin
     match partial_report with
     | Done _ ->
@@ -143,6 +157,10 @@ let master ((password, host), _) partial_report =
   reports := partial_report :: !reports;
   []
 
+let filter_slaves slaves =
+  let slaves = List.filter Option.is_some slaves in
+  List.map Option.get slaves
+
 let main () =
   if !worker then
     let clean_up () =
@@ -152,8 +170,23 @@ let main () =
       let my_hostname = FilePath.get_extension !worker_cluster_file in
       let () = Utils.set_hostname my_hostname in
       let cluster = Utils.with_in_file !worker_cluster_file input_value in
+      let slaves = Utils.with_in_file !worker_slaves_file input_value in
+      let slaves = List.map Tree.walk slaves in
+      let () = compute ~worker:f_worker ~master (filter_slaves slaves) in
+
       let result = Query.run my_hostname cluster in
       let report = Report.make result in
+      let good_reports, bad_hosts =
+        List.partition
+          (function Done _ -> true | Failed _ -> false)
+          !reports
+      in
+      let good_reports =
+        List.map
+          (function Done v -> v | Failed _ -> assert false)
+          good_reports
+      in
+      let reports = List.fold_left Report.merge report good_reports in
       let () = if not !dirty then clean_up () in
       print_string coche_mark;
       print_string (Base64.str_encode (Marshal.to_string report []))
