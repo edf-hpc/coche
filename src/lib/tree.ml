@@ -45,3 +45,14 @@ let make l = List.fold_left make Empty l
 let walk = function
   | Empty -> None
   | Node (e, l) -> Some (e, l)
+
+let rec elements = function
+  | Empty -> []
+  | Node (e, l) -> List.fold_left (fun a t -> a@(elements t)) [e] l
+
+let rec print p = function
+  | Empty -> "[]"
+  | Node (e, l) ->
+     let q = List.map (print p) l in
+     let q = String.concat ", " q in
+     Printf.sprintf "%s [%s]" (p e) q

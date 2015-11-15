@@ -23,3 +23,5 @@ type 'a t
 val cardinal : 'a t -> int
 val make : 'a list -> 'a t
 val walk : 'a t -> ('a * 'a t list) option
+val elements : 'a t -> 'a list
+val print : ('a -> string) -> 'a t -> string
