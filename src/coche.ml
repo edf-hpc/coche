@@ -52,5 +52,8 @@ let main =
       | None -> Arg.usage !spec usage_msg
       | Some sc -> sc.Subcommand.main ()
     end
-  with Errors.Error e ->
-    Errors.exit e
+  with
+  | Errors.Error e ->
+     Errors.exit e
+  | e ->
+     Printf.eprintf "%s\n" (Printexc.to_string e)
