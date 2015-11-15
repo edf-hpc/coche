@@ -187,28 +187,37 @@ let q_file run file =
   if not run then
     skip file_o
   else
-    let file_name = file.f_name in
-    let siz = Unix.stat file.f_name in
-    let owner = getpwuid (siz.st_uid) in
-    let owner = owner.pw_name in
-    let group = getgrgid (siz.st_gid) in
-    let group = group.gr_name in
-    let kind = siz.st_kind in
-    let perm = siz.st_perm in
-    let file_r = {f_name  = file.f_name;
-                  f_owner = option_same file.f_owner owner;
-                  f_group = option_same file.f_group group;
-                  f_same  = Digest.file file_name;
-                  f_perms = option_same file.f_perms perm;
-                  f_type  = kind } in
-    if option_eq file.f_owner owner
-       && option_eq file.f_group group
-       && file.f_type = kind
-       && option_eq file.f_perms perm
-    then
-      ok file_r
-    else
-      fail (file_r, file_o)
+    try
+      let file_name = file.f_name in
+      let siz = Unix.stat file.f_name in
+      let owner = getpwuid (siz.st_uid) in
+      let owner = owner.pw_name in
+      let group = getgrgid (siz.st_gid) in
+      let group = group.gr_name in
+      let kind = siz.st_kind in
+      let perm = siz.st_perm in
+      let file_r = {f_name  = file.f_name;
+                    f_owner = option_same file.f_owner owner;
+                    f_group = option_same file.f_group group;
+                    f_same  = Digest.file file_name;
+                    f_perms = option_same file.f_perms perm;
+                    f_type  = kind } in
+      if option_eq file.f_owner owner
+         && option_eq file.f_group group
+         && file.f_type = kind
+         && option_eq file.f_perms perm
+      then
+        ok file_r
+      else
+        fail (file_r, file_o)
+    with _ ->
+         let file_r = {f_name  = file.f_name;
+                       f_owner = None;
+                       f_group = None;
+                       f_same  = Digest.file "/dev/null";
+                       f_perms = None;
+                       f_type  = file.f_type } in
+         fail (file_r, file_o)
 
 let q_sysconfig sysconfig =
   let vers = read_process "uname -r " in
