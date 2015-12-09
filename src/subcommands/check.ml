@@ -189,7 +189,7 @@ let main () =
       let reports = List.fold_left Report.merge report good_reports in
       let () = if not !dirty then clean_up () in
       print_string coche_mark;
-      print_string (Base64.str_encode (Marshal.to_string report []))
+      print_string (Base64.str_encode (Marshal.to_string reports []))
     end
   else
     (* Read XML file *)
