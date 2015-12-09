@@ -58,7 +58,7 @@ clean:
 
 # Test
 toplevel:
-	ocaml -init tests/toplevel.ml
+	rlwrap ocaml -init tests/toplevel.ml
 
 # Headers update
 headers:
