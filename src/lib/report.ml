@@ -463,6 +463,30 @@ let print_packages fmt packages =
   print_element fmt P.packages_match "Packages(match)" packages.M.p_match
 
 let print_file fmt file =
+  let null_val = Digest.file "/dev/null" in
+  let file =
+    if SSet.cardinal file.M_info.good = 0
+      && null_val = file.M_info.value.Ast.Base.f_same
+    then
+      try
+        let new_val = fst (List.hd file.M_info.bad) in
+        let new_good, new_bad =
+          List.partition (fun (v,l) -> v = new_val) file.M_info.bad
+        in
+        let new_good =
+          List.fold_left
+            (fun acc (_,l) -> SSet.union acc l)
+            SSet.empty
+            new_good
+        in
+        { M_info.value = new_val;
+          good = new_good;
+          bad = new_bad
+        }
+      with _ -> file
+    else
+      file
+  in
   print_element fmt P.file "File" file
 
 let print_system fmt system =
