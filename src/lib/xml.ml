@@ -602,4 +602,5 @@ let read file =
     config
   with e ->
     close_in ic;
+    if not !Flags.check_against_dtd then Printf.eprintf "E: Did you validate %s against the DTD?\n" file;
     Pervasives.raise e
