@@ -592,7 +592,7 @@ let rec read_cluster input =
     | _ as a -> xml_error input "cluster" a
 
 let read file =
-  let () = validate file in
+  let () = if !Flags.check_against_dtd then validate file in
   xml_file := file;
   let ic = open_in file in
   let input = Xmlm.make_input ~strip:true (`Channel ic) in

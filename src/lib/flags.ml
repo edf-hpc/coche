@@ -20,4 +20,5 @@
 
 let verbose = ref false
 let use_ssh_agent = ref false
+let check_against_dtd = ref true
 let par_level = ref (Utils.processors_count ())

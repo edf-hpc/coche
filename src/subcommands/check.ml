@@ -58,6 +58,8 @@ let set_parallelism p =
 
 let spec = [
   "-dtd", Arg.String set_dtd, " Set DTD file";
+  "--no-dtd", Arg.Clear Flags.check_against_dtd, " Do not check XML file against DTD";
+  "-n", Arg.Clear Flags.check_against_dtd, " Do not check XML file against DTD";
   "-debug", Arg.Unit set_debug, " Enable debug mode";
   "-dirty", Arg.Set dirty, " Enable dirty mode";
   "-p", Arg.Int set_parallelism, " Specify parallelism level";
