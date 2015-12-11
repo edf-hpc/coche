@@ -25,7 +25,6 @@ module Arg = CocheArg
 type response = Done of Report.t | Failed of string * string
 
 let xml_file = ref None
-let debug = ref false
 let dirty = ref false
 let worker = ref false
 let worker_cluster_file = ref ""
@@ -34,10 +33,6 @@ let reports = ref []
 let target_class = ref "default"
 
 let coche_mark = "COCHE_MARK"
-
-let set_debug () =
-  debug := true;
-  Functory.Control.set_debug true
 
 let set_worker () =
   worker := true;
@@ -60,7 +55,6 @@ let spec = [
   "-dtd", Arg.String set_dtd, " Set DTD file";
   "--no-dtd", Arg.Clear Flags.check_against_dtd, " Do not check XML file against DTD";
   "-n", Arg.Clear Flags.check_against_dtd, " Do not check XML file against DTD";
-  "-debug", Arg.Unit set_debug, " Enable debug mode";
   "-dirty", Arg.Set dirty, " Enable dirty mode";
   "-p", Arg.Int set_parallelism, " Specify parallelism level";
   "--use-ssh-agent", Arg.Set Flags.use_ssh_agent, " Use SSH agent (when available)";
@@ -109,7 +103,7 @@ let get_remote_file (password, host) remote_file local_destination =
 
 let launch_worker (password, host) binary =
   let flags = [|binary; "check"; "-worker"|] in
-  let flags = if !debug then Array.append flags [|"-debug"|] else flags in
+  let flags = if !Flags.debug then Array.append flags [|"-debug"|] else flags in
   let flags = if !dirty then Array.append flags [|"-dirty"|] else flags in
   let flags = Array.append flags [| "-cluster"; remote_cluster_file host |] in
   let flags = Array.append flags [| "-slaves"; remote_slaves_file host |] in

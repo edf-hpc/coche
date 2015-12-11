@@ -24,9 +24,15 @@ let usage_msg = Printf.sprintf "%s subcommand [options]\n%s"
   (Filename.basename Sys.argv.(0))
   (Subcommand.help ())
 
+let set_debug () =
+  Flags.debug := true;
+  Printexc.record_backtrace true;
+  Functory.Control.set_debug true
+
 let spec = ref (
   Arg.align [
     "-verbose", Arg.Set Flags.verbose, " Enable verbose mode";
+    "-debug", Arg.Unit set_debug, " Enable debug mode";
   ])
 
 let () = Arg.parse_dynamic
@@ -56,4 +62,7 @@ let main =
   | Errors.Error e ->
      Errors.exit e
   | e ->
-     Printf.eprintf "%s\n" (Printexc.to_string e)
+      if !Flags.debug then
+        Printexc.print_backtrace stderr;
+      Printf.eprintf "%s\n" (Printexc.to_string e);
+      exit(128)
