@@ -129,6 +129,7 @@ let f_worker (host, slaves) =
     let _ = Sys.command(Printf.sprintf "ln -s %s %s" tmp_binary_name remote_binary_file) in
     send_files (password, host) [| remote_binary_file; remote_cluster_file ; remote_slaves_file|] "/tmp";
     let ssh_output = launch_worker (password, host) remote_binary_file in
+    let () = if not !dirty then FileUtil.rm [remote_slaves_file] in
     begin
       try
         let _, report_raw = ExtString.String.split ssh_output coche_mark in
@@ -164,7 +165,7 @@ let filter_slaves slaves =
 let main () =
   if !worker then
     let clean_up () =
-      FileUtil.rm [!worker_cluster_file; Sys.argv.(0)]
+      FileUtil.rm [!worker_cluster_file; !worker_slaves_file; Sys.argv.(0)]
     in
     begin
       let my_hostname = FilePath.get_extension !worker_cluster_file in
