@@ -21,7 +21,7 @@
         </class>
 
 	<netconfig name="default" classes="compute,graph" >
-		<device name="eth0" target="local" state="up" />
+		<device name="eth0" target="local" flags="up,lower_up,broadcast" />
 	</netconfig>
 
 	<hardware name="default" classes="debian" >
